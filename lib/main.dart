@@ -55,80 +55,89 @@ class _MyHomePageState extends State<MyHomePage> {
 				title: Text(widget.title),
 			),
 			body: Consumer<LightsModel>(
-				builder: (context, lights, child) => Center(
-					child: Column(
-						mainAxisAlignment: MainAxisAlignment.center,
-						children: [
-							Row(
-								mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+				builder: (context, lights, child) {
+					if (!lights.initialized) {
+						return Center(
+							child: CircularProgressIndicator()
+						);
+					}
+					else {
+						return Center(
+							child: Column(
+								mainAxisAlignment: MainAxisAlignment.center,
 								children: [
-									RaisedButton.icon(
-										icon: Icon(Icons.flash_off),
-										label: Text("OFF"),
-										color: (lights.frontLightStatus == FRONT_LIGHT_OFF) ? chosenSettingColor : null,
-										disabledColor: (lights.frontLightStatus == FRONT_LIGHT_OFF) ? chosenSettingColorDisabled : null,
-										onPressed: lights.lightsOn ? () => lights.setFrontLight(FRONT_LIGHT_OFF) : null
+									Row(
+										mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+										children: [
+											RaisedButton.icon(
+												icon: Icon(Icons.flash_off),
+												label: Text("OFF"),
+												color: (lights.frontLightStatus == FRONT_LIGHT_OFF) ? chosenSettingColor : null,
+												disabledColor: (lights.frontLightStatus == FRONT_LIGHT_OFF) ? chosenSettingColorDisabled : null,
+												onPressed: lights.lightsOn ? () => lights.setFrontLight(FRONT_LIGHT_OFF) : null
+											),
+											RaisedButton.icon(
+												icon: Icon(Icons.wb_sunny),
+												label: Text("LOW"),
+												color: (lights.frontLightStatus == FRONT_LIGHT_ON_LOW) ? chosenSettingColor : null,
+												disabledColor: (lights.frontLightStatus == FRONT_LIGHT_ON_LOW) ? chosenSettingColorDisabled : null,
+												onPressed: lights.lightsOn ? () => lights.setFrontLight(FRONT_LIGHT_ON_LOW) : null
+											),
+											RaisedButton.icon(
+												icon: Icon(Icons.wb_sunny),
+												label: Text("HIGH"),
+												color: (lights.frontLightStatus == FRONT_LIGHT_ON_HIGH) ? chosenSettingColor : null,
+												disabledColor: (lights.frontLightStatus == FRONT_LIGHT_ON_HIGH) ? chosenSettingColorDisabled : null,
+												onPressed: lights.lightsOn ? () => lights.setFrontLight(FRONT_LIGHT_ON_HIGH) : null
+											)
+										]
 									),
-									RaisedButton.icon(
-										icon: Icon(Icons.wb_sunny),
-										label: Text("LOW"),
-										color: (lights.frontLightStatus == FRONT_LIGHT_ON_LOW) ? chosenSettingColor : null,
-										disabledColor: (lights.frontLightStatus == FRONT_LIGHT_ON_LOW) ? chosenSettingColorDisabled : null,
-										onPressed: lights.lightsOn ? () => lights.setFrontLight(FRONT_LIGHT_ON_LOW) : null
+									Text("Front light"),
+									Row(
+										mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+										children: [
+											RaisedButton.icon(
+												icon: Icon(Icons.flash_off),
+												label: Text("OFF"),
+												color: (lights.rearLightStatus == REAR_LIGHT_OFF) ? chosenSettingColor : null,
+												disabledColor: (lights.rearLightStatus == REAR_LIGHT_OFF) ? chosenSettingColorDisabled : null,
+												onPressed: lights.lightsOn ? () => lights.setRearLight(REAR_LIGHT_OFF) : null
+											),
+											RaisedButton.icon(
+												icon: Icon(Icons.flash_on),
+												label: Text("SOLID"),
+												color: (lights.rearLightStatus == REAR_LIGHT_ON_SOLID) ? chosenSettingColor : null,
+												disabledColor: (lights.rearLightStatus == REAR_LIGHT_ON_SOLID) ? chosenSettingColorDisabled : null,
+												onPressed: lights.lightsOn ? () => lights.setRearLight(REAR_LIGHT_ON_SOLID) : null
+											),
+											RaisedButton.icon(
+												icon: Icon(Icons.wb_sunny),
+												label: Text("BLINKING"),
+												color: (lights.rearLightStatus == REAR_LIGHT_ON_BLINKING) ? chosenSettingColor : null,
+												disabledColor: (lights.rearLightStatus == REAR_LIGHT_ON_BLINKING) ? chosenSettingColorDisabled : null,
+												onPressed: lights.lightsOn ? () => lights.setRearLight(REAR_LIGHT_ON_BLINKING) : null
+											)
+										]
 									),
-									RaisedButton.icon(
-										icon: Icon(Icons.wb_sunny),
-										label: Text("HIGH"),
-										color: (lights.frontLightStatus == FRONT_LIGHT_ON_HIGH) ? chosenSettingColor : null,
-										disabledColor: (lights.frontLightStatus == FRONT_LIGHT_ON_HIGH) ? chosenSettingColorDisabled : null,
-										onPressed: lights.lightsOn ? () => lights.setFrontLight(FRONT_LIGHT_ON_HIGH) : null
-									)
-								]
-							),
-							Text("Front light"),
-							Row(
-								mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-								children: [
-									RaisedButton.icon(
-										icon: Icon(Icons.flash_off),
-										label: Text("OFF"),
-										color: (lights.rearLightStatus == REAR_LIGHT_OFF) ? chosenSettingColor : null,
-										disabledColor: (lights.rearLightStatus == REAR_LIGHT_OFF) ? chosenSettingColorDisabled : null,
-										onPressed: lights.lightsOn ? () => lights.setRearLight(REAR_LIGHT_OFF) : null
+									Text("Rear light"),
+									SizedBox(height: 32),
+									Transform.scale(
+										scale: 2.0,
+										child: Switch(
+											value: lights.lightsOn,
+											onChanged: lights.setLightsOn
+										)
 									),
-									RaisedButton.icon(
-										icon: Icon(Icons.flash_on),
-										label: Text("SOLID"),
-										color: (lights.rearLightStatus == REAR_LIGHT_ON_SOLID) ? chosenSettingColor : null,
-										disabledColor: (lights.rearLightStatus == REAR_LIGHT_ON_SOLID) ? chosenSettingColorDisabled : null,
-										onPressed: lights.lightsOn ? () => lights.setRearLight(REAR_LIGHT_ON_SOLID) : null
+									SizedBox(height: 16),
+									Text(
+										lights.lightsOn ? "Lights are on" : "Lights are off",
+										style: TextStyle(fontSize: 24)
 									),
-									RaisedButton.icon(
-										icon: Icon(Icons.wb_sunny),
-										label: Text("BLINKING"),
-										color: (lights.rearLightStatus == REAR_LIGHT_ON_BLINKING) ? chosenSettingColor : null,
-										disabledColor: (lights.rearLightStatus == REAR_LIGHT_ON_BLINKING) ? chosenSettingColorDisabled : null,
-										onPressed: lights.lightsOn ? () => lights.setRearLight(REAR_LIGHT_ON_BLINKING) : null
-									)
-								]
+								],
 							),
-							Text("Rear light"),
-							SizedBox(height: 32),
-							Transform.scale(
-								scale: 2.0,
-								child: Switch(
-									value: lights.lightsOn,
-									onChanged: lights.setLightsOn
-								)
-							),
-							SizedBox(height: 16),
-							Text(
-								lights.lightsOn ? "Lights are on" : "Lights are off",
-								style: TextStyle(fontSize: 24)
-							),
-						],
-					),
-				)
+						);
+					}
+				}
 			),
 		);
 	}
