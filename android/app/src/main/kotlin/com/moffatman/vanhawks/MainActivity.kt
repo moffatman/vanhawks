@@ -1,4 +1,4 @@
-package com.example.vanhawks
+package com.moffatman.vanhawks
 
 import io.flutter.embedding.android.FlutterActivity
 
