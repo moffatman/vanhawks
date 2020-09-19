@@ -11,7 +11,6 @@ const Duration _CONNECT_TIMEOUT = Duration(seconds: 5);
 Guid _VANHAWKS_LIGHTS_CHARACTERISTICS_UUID = Guid("9ac78e8d1e9943ce83637c1b1e003a11");
 const String _FRONT_LIGHT_STATUS_KEY = "front_light_status";
 const String _REAR_LIGHT_STATUS_KEY = "rear_light_status";
-const String _LIGHTS_ON_KEY = "lights_on";
 const int _FRONT_LIGHT_ID = 3;
 const int _FRONT_LIGHT_OFF = 0;
 const int _FRONT_LIGHT_ON_LOW = 1;
@@ -30,9 +29,11 @@ enum _ConnectionState {
 
 class BikePage extends StatefulWidget {
 	final BluetoothDevice device;
+	final int rssi;
 
 	BikePage({
-		@required this.device
+		@required this.device,
+		@required this.rssi
 	});
 
 	@override
@@ -60,16 +61,6 @@ class _BikePageState extends State<BikePage> {
 		});
 		_prefs.setInt(_REAR_LIGHT_STATUS_KEY, value);
 	}
-	bool _lightsOn;
-	bool get lightsOn {
-		return _lightsOn;
-	}
-	set lightsOn(bool value) {
-		setState(() {
-			_lightsOn = value;
-		});
-		_prefs.setBool(_LIGHTS_ON_KEY, value);
-	}
 	SharedPreferences _prefs;
 	
 	_ConnectionState _connectionState = _ConnectionState.Connecting;
@@ -82,7 +73,6 @@ class _BikePageState extends State<BikePage> {
 		setState(() {
 			_frontLight = _prefs.getInt(_FRONT_LIGHT_STATUS_KEY) ?? _FRONT_LIGHT_OFF;
 			_rearLight = _prefs.getInt(_REAR_LIGHT_STATUS_KEY) ?? _REAR_LIGHT_OFF;
-			_lightsOn = _prefs.getBool(_LIGHTS_ON_KEY) ?? false;
 		});
 	}
 
@@ -128,9 +118,18 @@ class _BikePageState extends State<BikePage> {
 							}
 						}
 					}
-					setState(() {
-						_connectionState = (this._characteristic != null) ? _ConnectionState.Good : _ConnectionState.BadDevice;
-					});
+					if (this._characteristic != null) {
+						_characteristic.write([_FRONT_LIGHT_ID, frontLight, frontLight]);
+						_characteristic.write([_REAR_LIGHT_ID, rearLight, rearLight]);
+						setState(() {
+							_connectionState =  _ConnectionState.Good;
+						});
+					}
+					else {
+						setState(() {
+ 							_connectionState = _ConnectionState.BadDevice;
+						});
+					}
 				}
 				else if (newState == BluetoothDeviceState.connecting) {
 					setState(() {
@@ -180,7 +179,8 @@ class _BikePageState extends State<BikePage> {
 				children: [
 					BluetoothRow(
 						device: widget.device,
-						onTap: null
+						onTap: null,
+						rssi: widget.rssi
 					),
 					if (_connectionState == _ConnectionState.Good) Expanded(
 						child: Column(
@@ -188,7 +188,7 @@ class _BikePageState extends State<BikePage> {
 							crossAxisAlignment: CrossAxisAlignment.center,
 							children: [
 								Text("Front Light", style: TextStyle(
-									fontSize: 32
+									fontSize: 28
 								)),
 								BikeLightButton(
 									options: [
@@ -216,8 +216,9 @@ class _BikePageState extends State<BikePage> {
 										await _characteristic.write([_FRONT_LIGHT_ID, choice, choice]);
 									}
 								),
+								Container(),
 								Text("Rear Lights", style: TextStyle(
-									fontSize: 32
+									fontSize: 28
 								)),
 								BikeLightButton(
 									options: [
@@ -245,29 +246,7 @@ class _BikePageState extends State<BikePage> {
 										await _characteristic.write([_REAR_LIGHT_ID, choice, choice]);
 									}
 								),
-								Text("Overall", style: TextStyle(
-									fontSize: 32
-								)),
-								Switch(
-									value: lightsOn,
-									onChanged: (choice) async {
-										setState(() {
-											lightsOn = choice;
-										});
-										if (choice) {
-											await Future.wait([
-												_characteristic.write([_FRONT_LIGHT_ID, frontLight, frontLight]),
-												_characteristic.write([_REAR_LIGHT_ID, rearLight, rearLight])
-											]);
-										}
-										else {
-											await Future.wait([
-												_characteristic.write([_FRONT_LIGHT_ID, _FRONT_LIGHT_OFF, _FRONT_LIGHT_OFF]),
-												_characteristic.write([_REAR_LIGHT_ID, _REAR_LIGHT_OFF, _REAR_LIGHT_OFF])
-											]);
-										}
-									}
-								)
+								Container()
 							]
 						)
 					)
@@ -354,22 +333,18 @@ class _BikeLightButtonState extends State<BikeLightButton> {
 
 	Widget _buildChild({BikeLightOption option, bool selected}) {
 		return Container(
-			padding: EdgeInsets.all(16),
+			padding: EdgeInsets.all(8),
 			child: Column(
 				mainAxisAlignment: MainAxisAlignment.center,
 				children: [
 					Container(
 						width: 50,
 						height: 50,
-						child: (_loading && selected) ? Center(
-							child: CircularProgressIndicator(
-								valueColor: AlwaysStoppedAnimation(Colors.black)
-							)
-							) : Icon(option.icon, size: 48)
+						child: Icon(option.icon, size: 48)
 					),
-					SizedBox(height: 16),
+					SizedBox(height: 8),
 					Text(option.text, style: TextStyle(
-						fontSize: 24
+						fontSize: 20
 					))
 				]
 			)

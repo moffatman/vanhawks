@@ -8,7 +8,7 @@ import 'icons.dart';
 class BluetoothRow extends StatefulWidget {
 	final int rssi;
 	final BluetoothDevice device;
-	final Future<void> Function() onTap;
+	final Future<void> Function(bool) onTap;
 
 	BluetoothRow({
 		@required this.device,
@@ -21,7 +21,6 @@ class BluetoothRow extends StatefulWidget {
 }
 
 class _BluetoothRowState extends State<BluetoothRow> {
-	bool _loading = false;
 	BluetoothDeviceState _state;
 	StreamSubscription<BluetoothDeviceState> _stateSubscription;
 
@@ -82,8 +81,8 @@ class _BluetoothRowState extends State<BluetoothRow> {
 	}
 
 	IconData _pickIconData() {
-		if (widget.rssi == null) {
-			return Icons.bluetooth;
+		if (widget.rssi == null || _state == BluetoothDeviceState.connected) {
+			return Icons.bluetooth_connected;
 		}
 		else {
 			if (widget.rssi < -85) {
@@ -104,7 +103,7 @@ class _BluetoothRowState extends State<BluetoothRow> {
 			tag: widget.device.id,
 			child: Material(
 				child: ListTile(
-					leading: _loading ? CircularProgressIndicator() : Icon(_pickIconData()),
+					leading: Icon(_pickIconData()),
 					title: widget.device.name.length > 0 ? 
 						Text(widget.device.name) :
 						Text(widget.device.id.id, style: TextStyle(
@@ -114,21 +113,7 @@ class _BluetoothRowState extends State<BluetoothRow> {
 						child: Icon(Icons.info),
 						onTap: () => _showInfo(context)
 					),
-					onTap: () async {
-						setState(() {
-							_loading = true;
-						});
-						try {
-							await widget.onTap();
-						}
-						finally {
-							if (mounted) {
-								setState(() {
-									_loading = false;
-								});
-							}
-						}
-					}
+					onTap: () => widget.onTap(_state == BluetoothDeviceState.connected)
 				)
 			)
 		);
