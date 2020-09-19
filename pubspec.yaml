@@ -31,7 +31,6 @@ dependencies:
 
   shared_preferences: '>=0.5.10 <2.0.0'
   flutter_blue: ^0.7.2
-  provider: ^4.3.2+1
 
 dev_dependencies:
   flutter_test:
@@ -86,3 +85,10 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
+  fonts:
+    - family:  SunIcons
+      fonts:
+        - asset: fonts/SunIcons.ttf
+    - family:  SignalIcons
+      fonts:
+        - asset: fonts/SignalIcons.ttf
