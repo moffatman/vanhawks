@@ -113,7 +113,7 @@ class _BluetoothRowState extends State<BluetoothRow> {
 						child: Icon(Icons.info),
 						onTap: () => _showInfo(context)
 					),
-					onTap: () => widget.onTap(_state == BluetoothDeviceState.connected)
+					onTap: (widget.onTap != null) ? () => widget.onTap(_state == BluetoothDeviceState.connected) : null
 				)
 			)
 		);

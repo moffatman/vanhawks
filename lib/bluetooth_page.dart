@@ -16,7 +16,6 @@ class BluetoothPage extends StatefulWidget {
 
 class _BluetoothPageState extends State<BluetoothPage> with RouteAware {
 	SharedPreferences _prefs;
-	bool _initialized = false;
 	bool _beforeConnect = true;
 	BluetoothState _bluetoothState;
 
@@ -60,12 +59,13 @@ class _BluetoothPageState extends State<BluetoothPage> with RouteAware {
 	@override
 	void initState() {
 		super.initState();
+		_initialize();
 		FlutterBlue.instance.startScan();
 		FlutterBlue.instance.scanResults.listen((scanResults) async {
-			if (_initialized && (savedBluetoothIdentifier != null)) {
+			if (savedBluetoothIdentifier != null) {
 				ScanResult result = scanResults.firstWhere((result) => result.device.id == savedBluetoothIdentifier);
 				if (result != null && _beforeConnect) {
-					_tapBike(result, false);
+					_tapBike(result.device, result.rssi);
 				}
 			}
 		});
@@ -76,7 +76,14 @@ class _BluetoothPageState extends State<BluetoothPage> with RouteAware {
 				});
 			}
 		});
-		_initialize();
+		FlutterBlue.instance.connectedDevices.then((devices) {
+			if (savedBluetoothIdentifier != null) {
+				BluetoothDevice targetDevice = devices.firstWhere((device) => device.id == savedBluetoothIdentifier);
+				if (targetDevice != null && _beforeConnect) {
+					_tapBike(targetDevice, null);
+				}
+			}
+		});
 	}
 
 	@override
@@ -101,17 +108,17 @@ class _BluetoothPageState extends State<BluetoothPage> with RouteAware {
 		FlutterBlue.instance.startScan();
 	}
 
-	Future<void> _tapBike(ScanResult result, bool isConnected) async {
+	Future<void> _tapBike(BluetoothDevice device, int rssi) async {
 		setState(() {
-			savedBluetoothIdentifier = result.device.id;
-			savedBluetoothName = result.device.name;
+			savedBluetoothIdentifier = device.id;
+			savedBluetoothName = device.name;
 			_beforeConnect = false;
 		});
 		await Navigator.of(context).push(
 			MaterialPageRoute(
 				builder: (context) => BikePage(
-					device: result.device,
-					rssi: isConnected ? null : result.rssi
+					device: device,
+					rssi: rssi
 				)
 			)
 		);
@@ -159,14 +166,20 @@ class _BluetoothPageState extends State<BluetoothPage> with RouteAware {
 											)
 										),
 										SizedBox(height: 24),
-										RaisedButton(
-											child: Text("Choose a different device"),
-											onPressed: () {
-												setState(() {
-													savedBluetoothName = null;
-													savedBluetoothIdentifier = null;
-												});
-											}
+										Row(
+											mainAxisSize: MainAxisSize.max,
+											mainAxisAlignment: MainAxisAlignment.center,
+											children: [
+												RaisedButton(
+													child: Text("Choose a different device"),
+													onPressed: () {
+														setState(() {
+															savedBluetoothName = null;
+															savedBluetoothIdentifier = null;
+														});
+													}
+												)
+											]
 										),
 										SizedBox(height: 32)
 									]
@@ -188,7 +201,7 @@ class _BluetoothPageState extends State<BluetoothPage> with RouteAware {
 																	device: result.device,
 																	rssi: result.rssi,
 																	onTap: (isConnected) async {
-																		await _tapBike(result, isConnected);
+																		await _tapBike(result.device, result.rssi);
 																	}
 																);
 															}).toList()

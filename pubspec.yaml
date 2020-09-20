@@ -92,3 +92,6 @@ flutter:
     - family:  SignalIcons
       fonts:
         - asset: fonts/SignalIcons.ttf
+    - family:  BatteryIcons
+      fonts:
+        - asset: fonts/BatteryIcons.ttf
