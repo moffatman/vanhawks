@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import 'bluetooth_page.dart';
+import 'bike_finder.dart';
+import 'vanhawks_page.dart';
 
 void main() {
 	runApp(
@@ -17,7 +19,10 @@ class MyApp extends StatelessWidget {
 			primarySwatch: Colors.grey,
 			visualDensity: VisualDensity.adaptivePlatformDensity,
 		),
-		home: BluetoothPage()
+		home: ChangeNotifierProvider(
+			create: (context) => BikeFinder(),
+			child: VanhawksPage()
+		)
 	);
   }
 }
