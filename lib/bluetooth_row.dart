@@ -9,11 +9,13 @@ class BluetoothRow extends StatefulWidget {
 	final int rssi;
 	final BluetoothDevice device;
 	final Future<void> Function(bool) onTap;
+	final void Function() onForget;
 
 	BluetoothRow({
 		@required this.device,
 		this.rssi,
-		@required this.onTap
+		@required this.onTap,
+		this.onForget
 	});
 
 	@override
@@ -73,7 +75,14 @@ class _BluetoothRowState extends State<BluetoothRow> {
 									widget.device.disconnect();
 								}
 							)
-						]
+						],
+						if (widget.onForget != null) FlatButton(
+							child: Text("Forget"),
+							onPressed: () {
+								Navigator.of(context).pop();
+								widget.onForget();
+							}
+						)
 					]
 				);
 			}

@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
+import 'package:page_transition/page_transition.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'bike_page.dart';
@@ -11,6 +14,12 @@ const String _BLUETOOTH_NAME_KEY = "bluetooth_name";
 final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
 class BluetoothPage extends StatefulWidget {
+	final bool forgetPreviousDevice;
+
+	BluetoothPage({
+		this.forgetPreviousDevice = false
+	});
+
 	_BluetoothPageState createState() => _BluetoothPageState();
 }
 
@@ -46,12 +55,21 @@ class _BluetoothPageState extends State<BluetoothPage> with RouteAware {
 		_savedBluetoothName = id;
 	}
 
+	StreamSubscription<BluetoothState> _stateSubscription;
+	StreamSubscription<List<ScanResult>> _scanSubscription;
+
 	void _initialize() async {
 		_prefs = await SharedPreferences.getInstance();
 		savedBluetoothName = _prefs.getString(_BLUETOOTH_NAME_KEY);
 		String _previousBluetoothIdentifierString = _prefs.getString(_BLUETOOTH_ID_KEY);
 		if (_previousBluetoothIdentifierString != null) {
-			savedBluetoothIdentifier = DeviceIdentifier(_previousBluetoothIdentifierString);
+			if (widget.forgetPreviousDevice) {
+				savedBluetoothIdentifier = null;
+				savedBluetoothName = null;
+			}
+			else {
+				savedBluetoothIdentifier = DeviceIdentifier(_previousBluetoothIdentifierString);
+			}
 		}
 		_bluetoothState = await FlutterBlue.instance.state.first;
 	}
@@ -60,20 +78,22 @@ class _BluetoothPageState extends State<BluetoothPage> with RouteAware {
 	void initState() {
 		super.initState();
 		_initialize();
-		FlutterBlue.instance.startScan();
-		FlutterBlue.instance.scanResults.listen((scanResults) async {
+		_scanSubscription = FlutterBlue.instance.scanResults.listen((scanResults) async {
 			if (savedBluetoothIdentifier != null) {
-				ScanResult result = scanResults.firstWhere((result) => result.device.id == savedBluetoothIdentifier);
-				if (result != null && _beforeConnect) {
-					_tapBike(result.device, result.rssi);
+				Iterable<ScanResult> results = scanResults.where((result) => result.device.id == savedBluetoothIdentifier);
+				if (results.length > 0 && _beforeConnect) {
+					_tapBike(results.first.device, results.first.rssi);
 				}
 			}
 		});
-		FlutterBlue.instance.state.listen((newState) {
+		_stateSubscription = FlutterBlue.instance.state.listen((newState) {
 			if (mounted) {
 				setState(() {
 					_bluetoothState = newState;
 				});
+				if (newState == BluetoothState.on) {
+					FlutterBlue.instance.startScan();
+				}
 			}
 		});
 		FlutterBlue.instance.connectedDevices.then((devices) {
@@ -94,18 +114,11 @@ class _BluetoothPageState extends State<BluetoothPage> with RouteAware {
 
 	@override
 	void dispose() {
-		routeObserver.unsubscribe(this);
-		super.dispose();
-	}
-
-	@override
-	void didPushNext() {
 		FlutterBlue.instance.stopScan();
-	}
-
-	@override
-	void didPopNext() {
-		FlutterBlue.instance.startScan();
+		routeObserver.unsubscribe(this);
+		_stateSubscription.cancel();
+		_scanSubscription.cancel();
+		super.dispose();
 	}
 
 	Future<void> _tapBike(BluetoothDevice device, int rssi) async {
@@ -114,9 +127,10 @@ class _BluetoothPageState extends State<BluetoothPage> with RouteAware {
 			savedBluetoothName = device.name;
 			_beforeConnect = false;
 		});
-		await Navigator.of(context).push(
-			MaterialPageRoute(
-				builder: (context) => BikePage(
+		await Navigator.of(context).pushReplacement(
+			PageTransition(
+				type: PageTransitionType.fade,
+				child: BikePage(
 					device: device,
 					rssi: rssi
 				)
@@ -128,7 +142,8 @@ class _BluetoothPageState extends State<BluetoothPage> with RouteAware {
 	Widget build(BuildContext context) {
 		return Scaffold(
 			appBar: AppBar(
-				title: const Text("Vanhawks Controller")
+				title: const Text("Vanhawks Controller"),
+				automaticallyImplyLeading: false
 			),
 			body: Column(
 				crossAxisAlignment: CrossAxisAlignment.stretch,

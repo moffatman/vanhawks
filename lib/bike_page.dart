@@ -4,12 +4,15 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:page_transition/page_transition.dart';
 
+import 'bluetooth_page.dart';
 import 'bluetooth_row.dart';
 import 'icons.dart';
 
 const Duration _CONNECT_TIMEOUT = Duration(seconds: 5);
 const Duration _BATTERY_CHECK_INTERVAL = Duration(seconds: 30);
+// ignore: non_constant_identifier_names
 Guid _VANHAWKS_LIGHTS_CHARACTERISTICS_UUID = Guid("9ac78e8d1e9943ce83637c1b1e003a11");
 const String _FRONT_LIGHT_STATUS_KEY = "front_light_status";
 const String _REAR_LIGHT_STATUS_KEY = "rear_light_status";
@@ -276,22 +279,34 @@ class _BikePageState extends State<BikePage> {
 	@override
 	void dispose() {
 		super.dispose();
-		_stateSubscription.cancel();
-		_characteristicSubscription.cancel();
+		_stateSubscription?.cancel();
+		_characteristicSubscription?.cancel();
 	}
 
 	@override
 	Widget build(BuildContext context) {
 		return Scaffold(
 			appBar: AppBar(
-				title: const Text("Vanhawks Controller")
+				title: const Text("Vanhawks Controller"),
+				automaticallyImplyLeading: false
 			),
 			body: Column(
 				children: [
 					BluetoothRow(
 						device: widget.device,
 						onTap: null,
-						rssi: widget.rssi
+						rssi: widget.rssi,
+						onForget: () {
+							widget.device.disconnect();
+							Navigator.of(context).pushReplacement(
+									PageTransition(
+										type: PageTransitionType.fade,
+										child: BluetoothPage(
+											forgetPreviousDevice: true
+										)
+									)
+								);
+							}
 					),
 					if (_connectionState == _ConnectionState.Good) Expanded(
 						child: Column(
