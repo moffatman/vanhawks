@@ -67,8 +67,9 @@ class _BluetoothRowState extends State<BluetoothRow> {
 					content: SingleChildScrollView(
 						child: ListBody(
 							children: [
-								Text("Address: ${widget.device.id}"),
-								if (widget.rssi != null) Text("RSSI: widget.rssi dBm"),
+								Text("MAC Address:"),
+								Text("${widget.device.id}"),
+								if (widget.rssi != null) Text("RSSI: ${widget.rssi} dBm"),
 								...widget.info.map((line) => Text(line))
 							]
 						)
@@ -78,19 +79,19 @@ class _BluetoothRowState extends State<BluetoothRow> {
 							FlatButton(
 								child: Text("Disconnect"),
 								onPressed: () {
+									Navigator.of(context).pop();
 									if (widget.beforeDisconnect != null) {
 										widget.beforeDisconnect();
 									}
 									widget.device.disconnect();
-									Navigator.of(context).pop();
 								}
 							)
 						],
 						if (widget.onForget != null) FlatButton(
 							child: Text("Forget"),
 							onPressed: () {
-								widget.onForget();
 								Navigator.of(context).pop();
+								widget.onForget();
 							}
 						)
 					]

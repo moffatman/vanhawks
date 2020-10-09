@@ -333,16 +333,7 @@ class _BikePageState extends State<BikePage> {
 							children: [
 								BikeUIGroup(
 									title: "Battery",
-									child: Column(
-										children: [
-											Icon(_getBatteryIcon(), size: 48),
-											RaisedButton.icon(
-												icon: Icon(Icons.refresh),
-												label: Text("Update"),
-												onPressed: () => _checkBattery(_batteryCheckTimer)
-											)
-										]
-									)
+									child: Icon(_getBatteryIcon(), size: 48)
 								),
 								BikeUIGroup(
 									title: "Front Light",
