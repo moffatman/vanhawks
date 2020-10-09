@@ -9,13 +9,17 @@ class BluetoothRow extends StatefulWidget {
 	final int rssi;
 	final BluetoothDevice device;
 	final Future<void> Function(bool) onTap;
+	final Function() beforeDisconnect;
 	final void Function() onForget;
+	final List<String> info;
 
 	BluetoothRow({
 		@required this.device,
 		this.rssi,
 		@required this.onTap,
-		this.onForget
+		this.onForget,
+		this.info = const [],
+		this.beforeDisconnect
 	});
 
 	@override
@@ -64,6 +68,8 @@ class _BluetoothRowState extends State<BluetoothRow> {
 						child: ListBody(
 							children: [
 								Text("Address: ${widget.device.id}"),
+								if (widget.rssi != null) Text("RSSI: widget.rssi dBm"),
+								...widget.info.map((line) => Text(line))
 							]
 						)
 					),
@@ -72,15 +78,19 @@ class _BluetoothRowState extends State<BluetoothRow> {
 							FlatButton(
 								child: Text("Disconnect"),
 								onPressed: () {
+									if (widget.beforeDisconnect != null) {
+										widget.beforeDisconnect();
+									}
 									widget.device.disconnect();
+									Navigator.of(context).pop();
 								}
 							)
 						],
 						if (widget.onForget != null) FlatButton(
 							child: Text("Forget"),
 							onPressed: () {
-								Navigator.of(context).pop();
 								widget.onForget();
+								Navigator.of(context).pop();
 							}
 						)
 					]

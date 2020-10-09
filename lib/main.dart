@@ -21,6 +21,3 @@ class MyApp extends StatelessWidget {
 	);
   }
 }
-
-Color chosenSettingColor = Colors.green;
-Color chosenSettingColorDisabled = Colors.grey.shade800;

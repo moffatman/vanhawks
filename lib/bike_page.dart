@@ -91,10 +91,10 @@ class _BikePageState extends State<BikePage> {
 	StreamSubscription<List<int>> _characteristicSubscription;
 	Completer<void> _firstBatteryRead = Completer();
 	Timer _batteryCheckTimer;
-	int _batteryMillivolts;
-	int _batteryMilliamps;
-	bool _batteryCharging;
+	int batteryMillivolts;
+	int batteryMilliamps;
 	BluetoothCharacteristic _characteristic;
+	bool _expectedDisconnect = false;
 
 	void _initializePrefs() async {
 		_prefs = await SharedPreferences.getInstance();
@@ -147,9 +147,8 @@ class _BikePageState extends State<BikePage> {
 			if ((bytes.lengthInBytes > 2) && (bytes.getUint8(1) == 4)) {
 				print('$value');
 				setState(() {
-					_batteryCharging = bytes.getUint8(6) != 1;
-					_batteryMillivolts = bytes.getUint16(2, Endian.little);
-					_batteryMilliamps = bytes.getUint16(4, Endian.little);
+					batteryMillivolts = bytes.getUint16(2, Endian.little);
+					batteryMilliamps = ((bytes.getUint8(6) != 1) ? 1 : -1) * bytes.getUint16(4, Endian.little);
 				});
 				if (!_firstBatteryRead.isCompleted) {
 					_firstBatteryRead.complete();
@@ -162,20 +161,20 @@ class _BikePageState extends State<BikePage> {
 	}
 
 	IconData _getBatteryIcon() {
-		if (_batteryCharging == null || _batteryMillivolts == null || _batteryMilliamps == null) {
+		if (batteryMillivolts == null || batteryMilliamps == null) {
 			return Icons.error;
 		}
-		else if (_batteryCharging) {
+		else if (batteryMilliamps > 0) {
 			return BatteryIcons.charging;
 		}
 		else {
-			if (_batteryMillivolts >= 4000) {
+			if (batteryMillivolts >= 4000) {
 				return BatteryIcons.level4;
 			}
-			else if (_batteryMillivolts >= 3272) {
+			else if (batteryMillivolts >= 3272) {
 				return BatteryIcons.level3;
 			}
-			else if (_batteryMillivolts >= 3200) {
+			else if (batteryMillivolts >= 3200) {
 				return BatteryIcons.level2;
 			}
 			else {
@@ -234,6 +233,7 @@ class _BikePageState extends State<BikePage> {
 							print("Error setting initial values: ${e.toString()}");
 						}
 						setState(() {
+							_expectedDisconnect = false;
 							_connectionState =  _ConnectionState.Good;
 						});
 					}
@@ -249,9 +249,15 @@ class _BikePageState extends State<BikePage> {
 					});
 				}
 				else {
-					setState(() {
-						_connectionState = _ConnectionState.Disconnected;
-					});
+					if (_expectedDisconnect) {
+						setState(() {
+							_connectionState = _ConnectionState.Disconnected;
+						});
+					}
+					else {
+						// reconnnect, it must be bike's fault
+						_connect();
+					}
 				}
 			}
 		});
@@ -296,7 +302,19 @@ class _BikePageState extends State<BikePage> {
 						device: widget.device,
 						onTap: null,
 						rssi: widget.rssi,
+						info: [
+							if (batteryMillivolts != null) "Battery Potential: $batteryMillivolts mV",
+							if (batteryMilliamps != null) "Battery Current: $batteryMilliamps mA"
+						],
+						beforeDisconnect: () {
+							setState(() {
+								_expectedDisconnect = true;
+							});
+						},
 						onForget: () {
+							setState(() {
+								_expectedDisconnect = true;
+							});
 							widget.device.disconnect();
 							Navigator.of(context).pushReplacement(
 									PageTransition(
@@ -318,8 +336,6 @@ class _BikePageState extends State<BikePage> {
 									child: Column(
 										children: [
 											Icon(_getBatteryIcon(), size: 48),
-											Text("Battery mV: $_batteryMillivolts"),
-											Text("Battery mA: $_batteryMilliamps"),
 											RaisedButton.icon(
 												icon: Icon(Icons.refresh),
 												label: Text("Update"),
