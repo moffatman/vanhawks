@@ -72,7 +72,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
 	void _initialize() async {
 		_prefs = await SharedPreferences.getInstance();
 		savedBluetoothName = _prefs.getString(_BLUETOOTH_NAME_KEY);
-		passedFirstLaunch = _prefs.getBool(_PASSED_FIRST_LAUNCH_KEY) ?? false;
+		passedFirstLaunch = _prefs.getBool(_PASSED_FIRST_LAUNCH_KEY) ?? Platform.isIOS;
 		String _previousBluetoothIdentifierString = _prefs.getString(_BLUETOOTH_ID_KEY);
 		if (_previousBluetoothIdentifierString != null) {
 			if (widget.forgetPreviousDevice) {
@@ -191,7 +191,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
 						Icon(Icons.new_releases, size: 32),
 						SizedBox(height: 8),
 						Text(
-							"Welcome to Vanhawks Controller",
+							"Setup",
 							textAlign: TextAlign.center,
 							style: TextStyle(
 								fontSize: 20
@@ -199,9 +199,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
 						),
 						SizedBox(height: 24),
 						Text(
-							Platform.isAndroid ? 
-								"Location permissions are required to scan for nearby Bluetooth devices. Please accept the permissions dialog for this app to function." : 
-								"Bluetooth permissions are required for this app to function. Please accept the permissions dialog.",
+							"Location permissions are required to scan for nearby Bluetooth devices. Please accept the permissions dialog for this app to function.",
 							style: TextStyle(
 								fontSize: 16
 							)
