@@ -296,6 +296,7 @@ class _BikePageState extends State<BikePage> {
 				title: const Text("Vanhawks Controller"),
 				automaticallyImplyLeading: false
 			),
+			backgroundColor: Colors.grey.shade200,
 			body: Column(
 				children: [
 					BluetoothRow(
@@ -433,7 +434,7 @@ class _BikePageState extends State<BikePage> {
 										Text("Error: $_connectionErrorMessage"),
 										SizedBox(height: 16)
 									],
-									RaisedButton(
+									ElevatedButton(
 										child: Text("Connect"),
 										onPressed: _connect
 									)
@@ -550,24 +551,48 @@ class _BikeLightButtonState extends State<BikeLightButton> {
 				bool selected = (widget.currentSelection == option.bluetoothValue);
 				return [
 					Container(
-						child: selected ? RaisedButton(
+						child: selected ? ElevatedButton(
 							child: _buildChild(
 								option: option,
 								selected: selected
 							),
-							disabledColor: Colors.grey,
-							disabledTextColor: Colors.white,
+							style: ButtonStyle(
+								backgroundColor: MaterialStateProperty.resolveWith<Color>(
+									(Set <MaterialState> states) {
+										if (states.contains(MaterialState.disabled)) {
+											return Colors.grey;
+										}
+										return null;
+									}
+								),
+								foregroundColor: MaterialStateProperty.resolveWith<Color>(
+									(Set <MaterialState> states) {
+										if (states.contains(MaterialState.disabled)) {
+											return Colors.white;
+										}
+										return null;
+									}
+								)
+							),
 							onPressed: _buildOnPressed(
 								option: option,
 								selected: selected
 							)
-						) : OutlineButton(
+						) : OutlinedButton(
 							child: _buildChild(
 								option: option,
 								selected: selected
 							),
-							//disabledColor: selected ? Colors.red.shade400 : null,
-							disabledTextColor: Colors.black,
+							style: ButtonStyle(
+								foregroundColor: MaterialStateProperty.resolveWith<Color>(
+									(Set <MaterialState> states) {
+										if (states.contains(MaterialState.disabled)) {
+											return Colors.grey;
+										}
+										return Colors.black;
+									}
+								)
+							),
 							onPressed: _buildOnPressed(
 								option: option,
 								selected: selected

@@ -67,16 +67,16 @@ class _BluetoothRowState extends State<BluetoothRow> {
 					content: SingleChildScrollView(
 						child: ListBody(
 							children: [
-								Text("MAC Address:"),
-								Text("${widget.device.id}"),
 								if (widget.rssi != null) Text("RSSI: ${widget.rssi} dBm"),
-								...widget.info.map((line) => Text(line))
+								...widget.info.map((line) => Text(line)),
+								Text(""),
+								Text("MAC Address: ${widget.device.id}", style: TextStyle(fontSize: 14), textAlign: TextAlign.left)
 							]
 						)
 					),
 					actions: [
 						if (_state == BluetoothDeviceState.connected) ...[
-							FlatButton(
+							TextButton(
 								child: Text("Disconnect"),
 								onPressed: () {
 									Navigator.of(context).pop();
@@ -87,7 +87,7 @@ class _BluetoothRowState extends State<BluetoothRow> {
 								}
 							)
 						],
-						if (widget.onForget != null) FlatButton(
+						if (widget.onForget != null) TextButton(
 							child: Text("Forget"),
 							onPressed: () {
 								Navigator.of(context).pop();
