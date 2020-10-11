@@ -179,48 +179,51 @@ class _BluetoothPageState extends State<BluetoothPage> {
 			);
 		}
 		else if (!_passedFirstLaunch) {
-			return Column(
-				mainAxisAlignment: MainAxisAlignment.center,
-				children: [
-					SizedBox(height: 32),
-					Icon(Icons.new_releases, size: 32),
-					SizedBox(height: 8),
-					Text(
-						"Welcome to Vanhawks Controller",
-						textAlign: TextAlign.center,
-						style: TextStyle(
-							fontSize: 20
-						)
-					),
-					SizedBox(height: 24),
-					Text(
-						Platform.isAndroid ? 
-							"Location permissions are required to scan for nearby Bluetooth devices. Please accept the permissions dialog for this app to function." : 
-							"Bluetooth permissions are required for this app to function. Please accept the permissions dialog.",
-						style: TextStyle(
-							fontSize: 16
-						)
-					),
-					SizedBox(height: 24),
-					Row(
-						mainAxisSize: MainAxisSize.max,
-						mainAxisAlignment: MainAxisAlignment.center,
-						children: [
-							ElevatedButton(
-								child: Text("OK"),
-								onPressed: () {
-									setState(() {
-										passedFirstLaunch = true;
-										if (_bluetoothState == BluetoothState.on) {
-											FlutterBlue.instance.startScan();
-										}
-									});
-								}
+			return Container(
+				padding: EdgeInsets.all(16),
+				child: Column(
+					mainAxisAlignment: MainAxisAlignment.center,
+					children: [
+						SizedBox(height: 32),
+						Icon(Icons.new_releases, size: 32),
+						SizedBox(height: 8),
+						Text(
+							"Welcome to Vanhawks Controller",
+							textAlign: TextAlign.center,
+							style: TextStyle(
+								fontSize: 20
 							)
-						]
-					),
-					SizedBox(height: 32)
-				]
+						),
+						SizedBox(height: 24),
+						Text(
+							Platform.isAndroid ? 
+								"Location permissions are required to scan for nearby Bluetooth devices. Please accept the permissions dialog for this app to function." : 
+								"Bluetooth permissions are required for this app to function. Please accept the permissions dialog.",
+							style: TextStyle(
+								fontSize: 16
+							)
+						),
+						SizedBox(height: 24),
+						Row(
+							mainAxisSize: MainAxisSize.max,
+							mainAxisAlignment: MainAxisAlignment.center,
+							children: [
+								ElevatedButton(
+									child: Text("OK"),
+									onPressed: () {
+										setState(() {
+											passedFirstLaunch = true;
+											if (_bluetoothState == BluetoothState.on) {
+												FlutterBlue.instance.startScan();
+											}
+										});
+									}
+								)
+							]
+						),
+						SizedBox(height: 32)
+					]
+				)
 			);
 		}
 		else if (_bluetoothState == BluetoothState.on) {
@@ -352,10 +355,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
 						),
 					)
 					else Card(
-						child: Container(
-							padding: EdgeInsets.all(16),
-							child: _cardContents(context)
-						)
+						child: _cardContents(context)
 					),
 					SizedBox(height: 16)
 				]
