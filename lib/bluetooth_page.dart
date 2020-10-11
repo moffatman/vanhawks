@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:page_transition/page_transition.dart';
@@ -98,13 +99,13 @@ class _BluetoothPageState extends State<BluetoothPage> {
 				}
 			}
 		});
-		_stateSubscription = FlutterBlue.instance.state.listen((newState) {
+		_stateSubscription = FlutterBlue.instance.state.listen((newState) async {
 			if (mounted) {
 				setState(() {
 					_bluetoothState = newState;
 				});
 				if (newState == BluetoothState.on) {
-					if (passedFirstLaunch) {
+					if (passedFirstLaunch && !(await FlutterBlue.instance.isScanning.first)) {
 						FlutterBlue.instance.startScan();
 					}
 				}
@@ -173,10 +174,8 @@ class _BluetoothPageState extends State<BluetoothPage> {
 
 	Widget _cardContents(BuildContext context) {
 		if (!_initialized) {
-			return Expanded(
-				child: Center(
+			return Center(
 					child: CircularProgressIndicator()
-				)
 			);
 		}
 		else if (!_passedFirstLaunch) {
@@ -260,43 +259,38 @@ class _BluetoothPageState extends State<BluetoothPage> {
 						stream: FlutterBlue.instance.scanResults,
 						builder: (BuildContext context, AsyncSnapshot<List<ScanResult>> snapshot) {
 							if (snapshot.hasData) {
+								List<Widget> rows = [];
 								if (snapshot.data.length > 0) {
 									snapshot.data.sort((a, b) => b.rssi - a.rssi);
-									snapshot.data.sort((a, b) {
+									mergeSort(snapshot.data, compare: (a, b) {
 										bool aName = ((a.device.name != null) && (a.device.name.length > 0));
 										bool bName = ((b.device.name != null) && (b.device.name.length > 0));
 										return aName ? (bName ? 0 : -1) : (bName ? 1 : 0);
 									});
-									return Expanded(
-										child: ListView(
-											shrinkWrap: true,
-											children: snapshot.data.map((result) {
-												return BluetoothRow(
-													device: result.device,
-													rssi: result.rssi,
-													onTap: (isConnected) async {
-														await _tapBike(result.device, result.rssi);
-													}
-												);
-											}).toList()
-										)
-									);
+									rows.addAll(snapshot.data.map((result) {
+										return BluetoothRow(
+											device: result.device,
+											rssi: result.rssi,
+											onTap: (isConnected) async {
+												await _tapBike(result.device, result.rssi);
+											}
+										);
+									}));
 								}
 								else {
-									return ListTile(
+									rows.add(ListTile(
 										title: Text(
 											"No Bluetooth devices are currently visible",
 											textAlign: TextAlign.center
-										),
-										trailing: GestureDetector(
-											child: Icon(Icons.refresh),
-											onTap: () async {
-												FlutterBlue.instance.stopScan();
-												FlutterBlue.instance.startScan();
-											}
-										),
-									);
+										)
+									));
 								}
+								return Expanded(
+									child: ListView(
+										shrinkWrap: true,
+										children: rows
+									)
+								);
 							}
 							else {
 								return Expanded(
@@ -352,7 +346,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
 						)
 					),
 					SizedBox(height: 32),
-					if (_bluetoothState == BluetoothState.on) Expanded(
+					if (_bluetoothState == BluetoothState.on && !(_beforeConnect && savedBluetoothName != null)) Expanded(
 						child: Card(
 							child: _cardContents(context),
 						),
