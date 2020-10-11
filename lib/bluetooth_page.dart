@@ -352,8 +352,14 @@ class _BluetoothPageState extends State<BluetoothPage> {
 						)
 					),
 					SizedBox(height: 32),
-					Expanded(
+					if (_bluetoothState == BluetoothState.on) Expanded(
 						child: Card(
+							child: _cardContents(context),
+						),
+					)
+					else Card(
+						child: Container(
+							padding: EdgeInsets.all(16),
 							child: _cardContents(context)
 						)
 					),
