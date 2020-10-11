@@ -84,6 +84,9 @@ class _BluetoothPageState extends State<BluetoothPage> {
 			}
 		}
 		_bluetoothState = await FlutterBlue.instance.state.first;
+		if (passedFirstLaunch && (_bluetoothState == BluetoothState.on) && !(await FlutterBlue.instance.isScanning.first)) {
+			FlutterBlue.instance.startScan();
+		}
 		_initialized = true;
 	}
 
