@@ -134,7 +134,9 @@ class _BikePageState extends State<BikePage> {
 
 	Future<void> _checkBattery(timer) async {
 		if (mounted) {
-			await _characteristic.write([0x14, 0x04]);
+			if (await widget.device.state.first == BluetoothDeviceState.connected) {
+				await _characteristic.write([0x14, 0x04]);
+			}
 		}
 		else {
 			timer.cancel();
