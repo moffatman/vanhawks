@@ -29,6 +29,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
 	bool _initialized = false;
 	bool _beforeConnect = true;
 	BluetoothState _bluetoothState;
+	bool _withinFirstFiveSeconds = true;
 
 	DeviceIdentifier _savedBluetoothIdentifier;
 	DeviceIdentifier get savedBluetoothIdentifier {
@@ -116,6 +117,11 @@ class _BluetoothPageState extends State<BluetoothPage> {
 		});
 		_recheckConnectedDevicesTimer = Timer.periodic(Duration(seconds: 2), _recheckConnectedDevices);
 		_recheckConnectedDevices(_recheckConnectedDevicesTimer);
+		Timer(Duration(seconds: 5), () {
+			setState(() {
+				_withinFirstFiveSeconds = false;
+			});
+		});
 	}
 
 	void _recheckConnectedDevices(Timer timer) {
@@ -171,6 +177,9 @@ class _BluetoothPageState extends State<BluetoothPage> {
 			return "Bluetooth is unavailable";
 		}
 		else {
+			if (_withinFirstFiveSeconds) {
+				return "Waiting for Bluetooth permission";
+			}
 			return "Unknown problem with bluetooth";
 		}
 	}
@@ -350,7 +359,10 @@ class _BluetoothPageState extends State<BluetoothPage> {
 						)
 					),
 					SizedBox(height: 32),
-					if (_bluetoothState == BluetoothState.on && !(_beforeConnect && savedBluetoothName != null)) Expanded(
+					if (
+						!_initialized // setup spinner
+						|| (_bluetoothState == BluetoothState.on && !(_beforeConnect && savedBluetoothName != null)) // results list
+					) Expanded(
 						child: Card(
 							child: _cardContents(context),
 						),
