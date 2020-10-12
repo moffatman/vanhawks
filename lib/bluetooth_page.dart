@@ -185,12 +185,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
 	}
 
 	Widget _cardContents(BuildContext context) {
-		if (!_initialized) {
-			return Center(
-					child: CircularProgressIndicator()
-			);
-		}
-		else if (!_passedFirstLaunch) {
+		if (!_passedFirstLaunch) {
 			return Container(
 				padding: EdgeInsets.all(16),
 				child: Column(
@@ -360,14 +355,13 @@ class _BluetoothPageState extends State<BluetoothPage> {
 					),
 					SizedBox(height: 32),
 					if (
-						!_initialized // setup spinner
-						|| (_bluetoothState == BluetoothState.on && !(_beforeConnect && savedBluetoothName != null)) // results list
+						_initialized && (_bluetoothState == BluetoothState.on && !(_beforeConnect && savedBluetoothName != null)) // results list
 					) Expanded(
 						child: Card(
 							child: _cardContents(context),
 						),
 					)
-					else Card(
+					else if (_initialized) Card(
 						child: _cardContents(context)
 					),
 					SizedBox(height: 16)
