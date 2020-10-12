@@ -309,6 +309,7 @@ class _BikePageState extends State<BikePage> {
 							if (batteryMillivolts != null) "Battery Potential: $batteryMillivolts mV",
 							if (batteryMilliamps != null) "Battery Current: $batteryMilliamps mA"
 						],
+						infoButton: true,
 						beforeDisconnect: () {
 							setState(() {
 								_expectedDisconnect = true;

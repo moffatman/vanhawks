@@ -12,6 +12,7 @@ class BluetoothRow extends StatefulWidget {
 	final Function() beforeDisconnect;
 	final void Function() onForget;
 	final List<String> info;
+	final bool infoButton;
 
 	BluetoothRow({
 		@required this.device,
@@ -19,7 +20,8 @@ class BluetoothRow extends StatefulWidget {
 		@required this.onTap,
 		this.onForget,
 		this.info = const [],
-		this.beforeDisconnect
+		this.beforeDisconnect,
+		this.infoButton = false
 	});
 
 	@override
@@ -129,10 +131,10 @@ class _BluetoothRowState extends State<BluetoothRow> {
 						Text(widget.device.id.id, style: TextStyle(
 							color: Colors.grey
 						)),
-					trailing: GestureDetector(
+					trailing: widget.infoButton ? GestureDetector(
 						child: Icon(Icons.info),
 						onTap: () => _showInfo(context)
-					),
+					) : null,
 					onTap: (widget.onTap != null) ? () => widget.onTap(_state == BluetoothDeviceState.connected) : null
 				)
 			)
