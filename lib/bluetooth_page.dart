@@ -314,15 +314,18 @@ class _BluetoothPageState extends State<BluetoothPage> {
 			);
 		}
 		else {
-			return Column(
-				mainAxisAlignment: MainAxisAlignment.center,
-				children: [
-					Icon(Icons.error, size: 48),
-					SizedBox(height: 16),
-					Text(_getNoBluetoothMessage(), style: TextStyle(
-						fontSize: 24
-					))
-				]
+			return Container(
+				padding: EdgeInsets.all(16),
+				child: Column(
+					mainAxisAlignment: MainAxisAlignment.center,
+					children: [
+						Icon(Icons.error, size: 48),
+						SizedBox(height: 16),
+						Text(_getNoBluetoothMessage(), style: TextStyle(
+							fontSize: 24
+						))
+					]
+				)
 			);
 		}
 	}
