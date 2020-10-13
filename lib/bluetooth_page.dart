@@ -3,6 +3,7 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -135,6 +136,13 @@ class _BluetoothPageState extends State<BluetoothPage> {
 				if (targetDevice != null && _beforeConnect) {
 					_tapBike(targetDevice, null);
 				}
+			}
+		}).catchError((error) {
+			if (!kReleaseMode &&  error.runtimeType == PlatformException) {
+				setState(() {
+					_mockBluetooth = true;
+					_initialized = true;
+				});
 			}
 		});
 	}
