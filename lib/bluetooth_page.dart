@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'bike_page.dart';
 import 'bluetooth_row.dart';
+import 'mock_bluetooth.dart';
 
 const String _BLUETOOTH_ID_KEY = "bluetooth_id";
 const String _BLUETOOTH_NAME_KEY = "bluetooth_name";
@@ -30,6 +31,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
 	bool _beforeConnect = true;
 	BluetoothState _bluetoothState;
 	bool _withinFirstFiveSeconds = true;
+	bool _mockBluetooth = false;
 
 	DeviceIdentifier _savedBluetoothIdentifier;
 	DeviceIdentifier get savedBluetoothIdentifier {
@@ -118,9 +120,11 @@ class _BluetoothPageState extends State<BluetoothPage> {
 		_recheckConnectedDevicesTimer = Timer.periodic(Duration(seconds: 2), _recheckConnectedDevices);
 		_recheckConnectedDevices(_recheckConnectedDevicesTimer);
 		Timer(Duration(seconds: 5), () {
-			setState(() {
-				_withinFirstFiveSeconds = false;
-			});
+			if (mounted) {
+				setState(() {
+					_withinFirstFiveSeconds = false;
+				});
+			}
 		});
 	}
 
@@ -231,7 +235,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
 				)
 			);
 		}
-		else if (_bluetoothState == BluetoothState.on) {
+		else if (_bluetoothState == BluetoothState.on || _mockBluetooth) {
 			return Column(
 				children: [
 					if (_beforeConnect && savedBluetoothName != null) ...[
@@ -264,7 +268,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
 						SizedBox(height: 32)
 					]
 					else StreamBuilder(
-						stream: FlutterBlue.instance.scanResults,
+						stream: _mockBluetooth ? MockFlutterBlue.instance.scanResults : FlutterBlue.instance.scanResults,
 						builder: (BuildContext context, AsyncSnapshot<List<ScanResult>> snapshot) {
 							if (snapshot.hasData) {
 								List<Widget> rows = [];
@@ -323,7 +327,18 @@ class _BluetoothPageState extends State<BluetoothPage> {
 						SizedBox(height: 16),
 						Text(_getNoBluetoothMessage(), style: TextStyle(
 							fontSize: 24
-						))
+						)),
+						if (!kReleaseMode) ...[
+							SizedBox(height: 16),
+							ElevatedButton(
+								child: Text("Use Mock Bluetooth"),
+								onPressed: () {
+									setState(() {
+										_mockBluetooth = true;
+									});
+								}
+							)
+						]
 					]
 				)
 			);
@@ -358,7 +373,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
 					),
 					SizedBox(height: 32),
 					if (
-						_initialized && (_bluetoothState == BluetoothState.on && !(_beforeConnect && savedBluetoothName != null)) // results list
+						_initialized && ((_bluetoothState == BluetoothState.on && !(_beforeConnect && savedBluetoothName != null)) || _mockBluetooth) // results list
 					) Expanded(
 						child: Card(
 							child: _cardContents(context),
