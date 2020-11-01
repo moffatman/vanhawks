@@ -164,7 +164,7 @@ class _BikePageState extends State<BikePage> {
 
 	IconData _getBatteryIcon() {
 		if (batteryMillivolts == null || batteryMilliamps == null) {
-			return Icons.error;
+			return Icons.battery_unknown;
 		}
 		else if (batteryMilliamps > 0) {
 			return BatteryIcons.charging;
@@ -202,6 +202,12 @@ class _BikePageState extends State<BikePage> {
 						if (_characteristicSubscription != null) {
 							_characteristicSubscription.cancel();
 							_firstBatteryRead = Completer();
+							Timer(Duration(seconds: 5), () {
+								if (!_firstBatteryRead.isCompleted) {
+									print("Timing out on battery read");
+									_firstBatteryRead.complete();
+								}
+							});
 						}
 						_characteristicSubscription = _characteristic.value.listen(_handleCharacteristicValue);
 						if (_batteryCheckTimer != null) {
