@@ -298,7 +298,6 @@ class _BikePageState extends State<BikePage> {
 				title: const Text("Vanhawks Controller"),
 				automaticallyImplyLeading: false
 			),
-			backgroundColor: Colors.grey.shade200,
 			body: Column(
 				children: [
 					BluetoothRow(
@@ -563,7 +562,7 @@ class _BikeLightButtonState extends State<BikeLightButton> {
 								backgroundColor: MaterialStateProperty.resolveWith<Color>(
 									(Set <MaterialState> states) {
 										if (states.contains(MaterialState.disabled)) {
-											return Colors.grey;
+											return Theme.of(context).disabledColor;
 										}
 										return null;
 									}
@@ -571,7 +570,7 @@ class _BikeLightButtonState extends State<BikeLightButton> {
 								foregroundColor: MaterialStateProperty.resolveWith<Color>(
 									(Set <MaterialState> states) {
 										if (states.contains(MaterialState.disabled)) {
-											return Colors.white;
+											return Theme.of(context).colorScheme.onSurface;
 										}
 										return null;
 									}
@@ -590,9 +589,9 @@ class _BikeLightButtonState extends State<BikeLightButton> {
 								foregroundColor: MaterialStateProperty.resolveWith<Color>(
 									(Set <MaterialState> states) {
 										if (states.contains(MaterialState.disabled)) {
-											return Colors.grey;
+											return Theme.of(context).disabledColor;
 										}
-										return Colors.black;
+										return Theme.of(context).colorScheme.onSurface;
 									}
 								)
 							),

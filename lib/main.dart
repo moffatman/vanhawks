@@ -14,9 +14,16 @@ class MyApp extends StatelessWidget {
 	return MaterialApp(
 		title: 'Vanhawks Controller',
 		theme: ThemeData(
+			brightness: Brightness.light,
 			primarySwatch: Colors.grey,
 			visualDensity: VisualDensity.adaptivePlatformDensity,
 		),
+		darkTheme: ThemeData(
+			brightness: Brightness.dark,
+			primarySwatch: Colors.grey,
+			visualDensity: VisualDensity.adaptivePlatformDensity
+		),
+		themeMode: ThemeMode.system,
 		home: BluetoothPage()
 	);
   }

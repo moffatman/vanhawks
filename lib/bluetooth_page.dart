@@ -360,23 +360,20 @@ class _BluetoothPageState extends State<BluetoothPage> {
 				title: const Text("Vanhawks Controller"),
 				automaticallyImplyLeading: false
 			),
-			backgroundColor: Colors.grey.shade200,
 			body: Column(
 				crossAxisAlignment: CrossAxisAlignment.stretch,
 				children: [
 					SizedBox(height: 32),
 					Icon(
 						Icons.bluetooth,
-						size: 48,
-						color: Colors.grey.shade800
+						size: 48
 					),
 					SizedBox(height: 16),
 					Text(
 						"Connect to your bicycle",
 						textAlign: TextAlign.center,
 						style: TextStyle(
-							fontSize: 24,
-							color: Colors.grey.shade800
+							fontSize: 24
 						)
 					),
 					SizedBox(height: 32),
