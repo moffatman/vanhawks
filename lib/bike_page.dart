@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:page_transition/page_transition.dart';
+import 'package:flutter_email_sender/flutter_email_sender.dart';
 
 import 'bluetooth_page.dart';
 import 'bluetooth_row.dart';
@@ -412,7 +413,34 @@ class _BikePageState extends State<BikePage> {
 								children: [
 									Icon(Icons.error, size: 48),
 									SizedBox(height: 16),
-									Text("This device is not a Vanhawks Valour bicycle")
+									Text("This device is not a Vanhawks Valour bicycle"),
+									SizedBox(height: 16),
+									ElevatedButton(
+										child: Text("Report Error"),
+										onPressed: () async {
+											List<BluetoothService> services = await widget.device.discoverServices();
+											String bluetoothText = services.map((service) {
+												return '- Service with ID ${service.uuid}\n' + ((service.characteristics != null) ? service.characteristics.map((characteristic) {
+													return '-- Characteristic with ID ${characteristic.uuid}\n' + ((characteristic.descriptors != null) ? characteristic.descriptors.map((descriptor) {
+														return '--- Descriptor with ID ${descriptor.uuid}\n';
+													}).join('') : '');
+												}).join('') : '');
+											}).join('');
+											print(bluetoothText);
+											FlutterEmailSender.send(Email(
+												body: '''
+													Hi Callum,
+													Your app, Vanhawks Bike Light Controller, did not recognize my bike
+													Here is the Bluetooth data that will help you figure this out:
+													$bluetoothText
+													Thanks!
+												''',
+												subject: 'Vanhawks app did not recognize my bike',
+												recipients: ['callum@moffatman.com'],
+												isHTML: false
+											));
+										}
+									)
 								]
 							)
 						)

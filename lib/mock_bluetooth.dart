@@ -5,11 +5,19 @@ import 'package:flutter_blue/flutter_blue.dart';
 import 'package:rxdart/rxdart.dart';
 
 class MockBike implements BluetoothDevice {
-	MockBike(this.name) {
+	List<BluetoothService> _services = [];
+
+	MockBike(this.name, {isVanhawks = false}) {
 		_state.add(BluetoothDeviceState.disconnected);
 		String idString = "";
 		for (int i = 0; i < 16; i++) {
 			idString += Random().nextInt(16).toRadixString(16);
+		}
+		if (isVanhawks) {
+			_services.add(MockBikeService());
+		}
+		else {
+			_services.add(MockInvalidService());
 		}
 		id = DeviceIdentifier(idString);
 	}
@@ -40,11 +48,7 @@ class MockBike implements BluetoothDevice {
 		_state.add(BluetoothDeviceState.disconnected);
 	}
 
-	Future<List<BluetoothService>> discoverServices() async {
-		return [
-			MockBikeService()
-		];
-	}
+	Future<List<BluetoothService>> discoverServices() async => _services;
 
 	Stream<List<BluetoothService>> get services async* {
 		
@@ -77,7 +81,34 @@ class MockBikeService implements BluetoothService {
 	get includedServices => [];
 	get deviceId => null;
 	get isPrimary => null;
-	get uuid => null;
+	get uuid => Guid("9ac78e8d1e9943ce83637c1b1e003a10");
+}
+
+class MockInvalidService implements BluetoothService {
+	get characteristics {
+		return [
+			MockInvalidCharacteristic()
+		];
+	}
+	get includedServices => [];
+	get deviceId => null;
+	get isPrimary => null;
+	get uuid => Guid("a0000e8d1e9943ce83637c1b1e003a11");
+}
+
+class MockInvalidCharacteristic implements BluetoothCharacteristic {
+	get isNotifying => null;
+	get descriptors => null;
+	get properties => null;
+	get serviceUuid => null;
+	get secondaryServiceUuid => null;
+	get lastValue => null;
+	get uuid => Guid("90000e8d1e9943ce83637c1b1e003a11");
+	get deviceId => null;
+	get value => null;
+	Future<bool> setNotifyValue(bool notify) async => true;
+	Future<List<int>> read() async => [];
+	Future<Null> write(List<int> value, {bool withoutResponse = false}) async => null;
 }
 
 class MockBikeCharacteristic implements BluetoothCharacteristic {
@@ -109,7 +140,7 @@ class MockFlutterBlue {
 	Stream<List<ScanResult>> get scanResults async* {
 		while (true) {
 			yield [
-				MockScanResult(MockBike("Vanhawks Valour")),
+				MockScanResult(MockBike("Vanhawks Valour", isVanhawks: true)),
 				MockScanResult(MockBike("")),
 				MockScanResult(MockBike("")),
 				MockScanResult(MockBike(""))
