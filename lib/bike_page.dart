@@ -562,26 +562,28 @@ class _BikePageState extends State<BikePage> {
 										onPressed: () async {
 											List<BluetoothService> services = await widget.device.discoverServices();
 											String availableDevicesText = widget.lastResults.map((result) {
-												return '- ${result.device.name} with ID ${result.device.id} with RSSI ${result.rssi}';
-											}).join('');
+												return '- "${result.device.name}" with ID ${result.device.id} and RSSI ${result.rssi}';
+											}).join('\n');
 											String connectedDeviceText = services.map((service) {
 												return '- Service with ID ${service.uuid}\n' + service.characteristics.map((characteristic) {
 													return '-- Characteristic with ID ${characteristic.uuid}\n' + characteristic.descriptors.map((descriptor) {
-														return '--- Descriptor with ID ${descriptor.uuid}\n';
-													}).join('');
-												}).join('');
-											}).join('');
-											print(connectedDeviceText);
+														return '--- Descriptor with ID ${descriptor.uuid}';
+													}).join('\n');
+												}).join('\n');
+											}).join('\n');
 											FlutterEmailSender.send(Email(
 												body: '''
 													Hi Callum,
 													Your app, Vanhawks Bike Light Controller, did not recognize my bike
 													Here is the Bluetooth data that will help you figure this out:
+
 													Available devices:
 													$availableDevicesText
-													Information about the chosen device:
-													${widget.device.name} with ID ${widget.device.id} with RSSI ${widget.rssi}
+													
+													Chosen device:
+													"${widget.device.name}" with ID ${widget.device.id} and RSSI ${widget.rssi}
 													$connectedDeviceText
+
 													Thanks!
 												''',
 												subject: 'Vanhawks app did not recognize my bike',
