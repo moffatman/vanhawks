@@ -98,7 +98,7 @@ class MockInvalidService implements BluetoothService {
 
 class MockInvalidCharacteristic implements BluetoothCharacteristic {
 	get isNotifying => throw UnimplementedError();
-	get descriptors => throw UnimplementedError();
+	get descriptors => [];
 	get properties => throw UnimplementedError();
 	get serviceUuid => throw UnimplementedError();
 	get secondaryServiceUuid => throw UnimplementedError();
