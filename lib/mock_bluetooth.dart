@@ -22,7 +22,7 @@ class MockBike implements BluetoothDevice {
 		id = DeviceIdentifier(idString);
 	}
 
-	DeviceIdentifier id;
+	late DeviceIdentifier id;
 
 	Stream<bool> get isDiscoveringServices async* {
 		yield false;
@@ -35,7 +35,7 @@ class MockBike implements BluetoothDevice {
 	}
 
 	Future<void> connect({
-		Duration timeout,
+		Duration? timeout,
 		bool autoConnect = true,
 	}) async {
 		print("connect()");
@@ -79,8 +79,8 @@ class MockBikeService implements BluetoothService {
 		];
 	}
 	get includedServices => [];
-	get deviceId => null;
-	get isPrimary => null;
+	get deviceId => throw UnimplementedError();
+	get isPrimary => throw UnimplementedError();
 	get uuid => Guid("9ac78e8d1e9943ce83637c1b1e003a10");
 }
 
@@ -91,21 +91,21 @@ class MockInvalidService implements BluetoothService {
 		];
 	}
 	get includedServices => [];
-	get deviceId => null;
-	get isPrimary => null;
+	get deviceId => throw UnimplementedError();
+	get isPrimary => throw UnimplementedError();
 	get uuid => Guid("a0000e8d1e9943ce83637c1b1e003a11");
 }
 
 class MockInvalidCharacteristic implements BluetoothCharacteristic {
-	get isNotifying => null;
-	get descriptors => null;
-	get properties => null;
-	get serviceUuid => null;
-	get secondaryServiceUuid => null;
-	get lastValue => null;
+	get isNotifying => throw UnimplementedError();
+	get descriptors => throw UnimplementedError();
+	get properties => throw UnimplementedError();
+	get serviceUuid => throw UnimplementedError();
+	get secondaryServiceUuid => throw UnimplementedError();
+	get lastValue => throw UnimplementedError();
 	get uuid => Guid("90000e8d1e9943ce83637c1b1e003a11");
-	get deviceId => null;
-	get value => null;
+	get deviceId => throw UnimplementedError();
+	get value => throw UnimplementedError();
 	Future<bool> setNotifyValue(bool notify) async => true;
 	Future<List<int>> read() async => [];
 	Future<Null> write(List<int> value, {bool withoutResponse = false}) async => null;
@@ -113,14 +113,14 @@ class MockInvalidCharacteristic implements BluetoothCharacteristic {
 
 class MockBikeCharacteristic implements BluetoothCharacteristic {
 	BehaviorSubject<List<int>> _value = BehaviorSubject<List<int>>();
-	get isNotifying => null;
-	get descriptors => null;
-	get properties => null;
-	get serviceUuid => null;
-	get secondaryServiceUuid => null;
-	get lastValue => null;
+	get isNotifying => throw UnimplementedError();
+	get descriptors => throw UnimplementedError();
+	get properties => throw UnimplementedError();
+	get serviceUuid => throw UnimplementedError();
+	get secondaryServiceUuid => throw UnimplementedError();
+	get lastValue => throw UnimplementedError();
 	get uuid => Guid("9ac78e8d1e9943ce83637c1b1e003a11");
-	get deviceId => null;
+	get deviceId => throw UnimplementedError();
 	get value => _value;
 	Future<bool> setNotifyValue(bool notify) async => true;
 	Future<List<int>> read() async => [];
@@ -152,7 +152,7 @@ class MockFlutterBlue {
 
 class MockScanResult implements ScanResult {
 	MockScanResult(this.device);
-	get advertisementData => null;
+	get advertisementData => throw UnimplementedError();
 	MockBike device;
 	int rssi = Random().nextInt(50) - 90;
 }

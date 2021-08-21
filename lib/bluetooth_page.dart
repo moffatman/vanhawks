@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vanhawks/util.dart';
 
 import 'bike_page.dart';
 import 'bluetooth_row.dart';
@@ -27,18 +28,18 @@ class BluetoothPage extends StatefulWidget {
 }
 
 class _BluetoothPageState extends State<BluetoothPage> {
-	SharedPreferences _prefs;
+	late SharedPreferences _prefs;
 	bool _initialized = false;
 	bool _beforeConnect = true;
-	BluetoothState _bluetoothState;
+	late BluetoothState _bluetoothState;
 	bool _withinFirstFiveSeconds = true;
 	bool _mockBluetooth = false;
 
-	DeviceIdentifier _savedBluetoothIdentifier;
-	DeviceIdentifier get savedBluetoothIdentifier {
+	DeviceIdentifier? _savedBluetoothIdentifier;
+	DeviceIdentifier? get savedBluetoothIdentifier {
 		return _savedBluetoothIdentifier;
 	}
-	set savedBluetoothIdentifier(DeviceIdentifier id) {
+	set savedBluetoothIdentifier(DeviceIdentifier? id) {
 		if (id != null) {
 			_prefs.setString(_BLUETOOTH_ID_KEY, id.id);
 		}
@@ -47,11 +48,11 @@ class _BluetoothPageState extends State<BluetoothPage> {
 		}
 		_savedBluetoothIdentifier = id;
 	}
-	String _savedBluetoothName;
-	String get savedBluetoothName {
+	String? _savedBluetoothName;
+	String? get savedBluetoothName {
 		return _savedBluetoothName;
 	}
-	set savedBluetoothName(String id) {
+	set savedBluetoothName(String? id) {
 		if (id != null) {
 			_prefs.setString(_BLUETOOTH_NAME_KEY, id);
 		}
@@ -60,7 +61,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
 		}
 		_savedBluetoothName = id;
 	}
-	bool _passedFirstLaunch;
+	late bool _passedFirstLaunch;
 	bool get passedFirstLaunch {
 		return _passedFirstLaunch;
 	}
@@ -69,15 +70,15 @@ class _BluetoothPageState extends State<BluetoothPage> {
 		_passedFirstLaunch = value;
 	}
 
-	StreamSubscription<BluetoothState> _stateSubscription;
-	StreamSubscription<List<ScanResult>> _scanSubscription;
-	Timer _recheckConnectedDevicesTimer;
+	late StreamSubscription<BluetoothState> _stateSubscription;
+	late StreamSubscription<List<ScanResult>> _scanSubscription;
+	late Timer _recheckConnectedDevicesTimer;
 
 	void _initialize() async {
 		_prefs = await SharedPreferences.getInstance();
 		savedBluetoothName = _prefs.getString(_BLUETOOTH_NAME_KEY);
 		passedFirstLaunch = _prefs.getBool(_PASSED_FIRST_LAUNCH_KEY) ?? Platform.isIOS;
-		String _previousBluetoothIdentifierString = _prefs.getString(_BLUETOOTH_ID_KEY);
+		String? _previousBluetoothIdentifierString = _prefs.getString(_BLUETOOTH_ID_KEY);
 		if (_previousBluetoothIdentifierString != null) {
 			if (widget.forgetPreviousDevice) {
 				savedBluetoothIdentifier = null;
@@ -92,17 +93,11 @@ class _BluetoothPageState extends State<BluetoothPage> {
 			FlutterBlue.instance.startScan();
 		}
 		_initialized = true;
-	}
-
-	@override
-	void initState() {
-		super.initState();
-		_initialize();
 		_scanSubscription = FlutterBlue.instance.scanResults.listen((scanResults) async {
 			if (savedBluetoothIdentifier != null) {
 				Iterable<ScanResult> results = scanResults.where((result) => result.device.id == savedBluetoothIdentifier);
 				if (results.length > 0 && _beforeConnect) {
-					_tapBike(results.first.device, results.first.rssi);
+					_tapBike(results.first.device, results.first.rssi, scanResults);
 				}
 			}
 		});
@@ -129,12 +124,18 @@ class _BluetoothPageState extends State<BluetoothPage> {
 		});
 	}
 
+	@override
+	void initState() {
+		super.initState();
+		_initialize();
+	}
+
 	void _recheckConnectedDevices(Timer timer) {
 		FlutterBlue.instance.connectedDevices.then((devices) {
 			if (savedBluetoothIdentifier != null) {
-				BluetoothDevice targetDevice = devices.firstWhere((device) => device.id == savedBluetoothIdentifier, orElse: () => null);
+				BluetoothDevice? targetDevice = devices.tryFirstWhere((device) => device.id == savedBluetoothIdentifier);
 				if (targetDevice != null && _beforeConnect) {
-					_tapBike(targetDevice, null);
+					_tapBike(targetDevice, null, []);
 				}
 			}
 		}).catchError((error) {
@@ -161,7 +162,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
 		super.dispose();
 	}
 
-	Future<void> _tapBike(BluetoothDevice device, int rssi) async {
+	Future<void> _tapBike(BluetoothDevice device, int? rssi, List<ScanResult> lastResults) async {
 		setState(() {
 			savedBluetoothIdentifier = device.id;
 			savedBluetoothName = device.name;
@@ -172,7 +173,8 @@ class _BluetoothPageState extends State<BluetoothPage> {
 				type: PageTransitionType.fade,
 				child: BikePage(
 					device: device,
-					rssi: rssi
+					rssi: rssi,
+					lastResults: lastResults
 				)
 			)
 		);
@@ -251,7 +253,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
 						Icon(Icons.directions_bike, size: 32),
 						SizedBox(height: 8),
 						Text(
-							"Looking for ${savedBluetoothName.length > 0 ? savedBluetoothName : "previous device"}",
+							"Looking for ${savedBluetoothName!.length > 0 ? savedBluetoothName : "previous device"}",
 							textAlign: TextAlign.center,
 							style: TextStyle(
 								fontSize: 20
@@ -280,19 +282,20 @@ class _BluetoothPageState extends State<BluetoothPage> {
 						builder: (BuildContext context, AsyncSnapshot<List<ScanResult>> snapshot) {
 							if (snapshot.hasData) {
 								List<Widget> rows = [];
-								if (snapshot.data.length > 0) {
-									snapshot.data.sort((a, b) => b.rssi - a.rssi);
-									mergeSort(snapshot.data, compare: (a, b) {
-										bool aName = ((a.device.name != null) && (a.device.name.length > 0));
-										bool bName = ((b.device.name != null) && (b.device.name.length > 0));
+								List<ScanResult> data = snapshot.data!;
+								if (data.length > 0) {
+									data.sort((a, b) => b.rssi - a.rssi);
+									mergeSort(data, compare: (ScanResult a, ScanResult b) {
+										bool aName = a.device.name.length > 0;
+										bool bName = b.device.name.length > 0;
 										return aName ? (bName ? 0 : -1) : (bName ? 1 : 0);
 									});
-									rows.addAll(snapshot.data.map((result) {
+									rows.addAll(data.map((result) {
 										return BluetoothRow(
 											device: result.device,
 											rssi: result.rssi,
 											onTap: (isConnected) async {
-												await _tapBike(result.device, result.rssi);
+												await _tapBike(result.device, result.rssi, data);
 											}
 										);
 									}));

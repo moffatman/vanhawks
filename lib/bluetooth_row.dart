@@ -6,18 +6,18 @@ import 'package:flutter_blue/flutter_blue.dart';
 import 'icons.dart';
 
 class BluetoothRow extends StatefulWidget {
-	final int rssi;
+	final int? rssi;
 	final BluetoothDevice device;
-	final Future<void> Function(bool) onTap;
-	final Function() beforeDisconnect;
-	final void Function() onForget;
+	final Future<void> Function(bool)? onTap;
+	final VoidCallback? beforeDisconnect;
+	final VoidCallback? onForget;
 	final List<String> info;
 	final bool infoButton;
 
 	BluetoothRow({
-		@required this.device,
+		required this.device,
 		this.rssi,
-		@required this.onTap,
+		this.onTap,
 		this.onForget,
 		this.info = const [],
 		this.beforeDisconnect,
@@ -29,8 +29,8 @@ class BluetoothRow extends StatefulWidget {
 }
 
 class _BluetoothRowState extends State<BluetoothRow> {
-	BluetoothDeviceState _state;
-	StreamSubscription<BluetoothDeviceState> _stateSubscription;
+	BluetoothDeviceState? _state;
+	late StreamSubscription<BluetoothDeviceState> _stateSubscription;
 
 	void _initStateSubscription() {
 		_stateSubscription = widget.device.state.listen((newState) {
@@ -82,9 +82,7 @@ class _BluetoothRowState extends State<BluetoothRow> {
 								child: Text("Disconnect"),
 								onPressed: () {
 									Navigator.of(context).pop();
-									if (widget.beforeDisconnect != null) {
-										widget.beforeDisconnect();
-									}
+									widget.beforeDisconnect?.call();
 									widget.device.disconnect();
 								}
 							)
@@ -93,7 +91,7 @@ class _BluetoothRowState extends State<BluetoothRow> {
 							child: Text("Forget"),
 							onPressed: () {
 								Navigator.of(context).pop();
-								widget.onForget();
+								widget.onForget?.call();
 							}
 						)
 					]
@@ -107,10 +105,10 @@ class _BluetoothRowState extends State<BluetoothRow> {
 			return Icons.bluetooth_connected;
 		}
 		else {
-			if (widget.rssi < -85) {
+			if (widget.rssi! < -85) {
 				return SignalIcons.signal_1;
 			}
-			else if (widget.rssi < -75) {
+			else if (widget.rssi! < -75) {
 				return SignalIcons.signal_2;
 			}
 			else {
@@ -135,7 +133,7 @@ class _BluetoothRowState extends State<BluetoothRow> {
 						child: Icon(Icons.info),
 						onTap: () => _showInfo(context)
 					) : null,
-					onTap: (widget.onTap != null) ? () => widget.onTap(_state == BluetoothDeviceState.connected) : null
+					onTap: (widget.onTap != null) ? () => widget.onTap!(_state == BluetoothDeviceState.connected) : null
 				)
 			)
 		);

@@ -17,17 +17,64 @@ const Duration _BATTERY_CHECK_INTERVAL = Duration(seconds: 30);
 Guid _VANHAWKS_LIGHTS_CHARACTERISTICS_UUID = Guid("9ac78e8d1e9943ce83637c1b1e003a11");
 const String _FRONT_LIGHT_STATUS_KEY = "front_light_status";
 const String _REAR_LIGHT_STATUS_KEY = "rear_light_status";
-const int _FRONT_LIGHT_ID = 3;
-const int _FRONT_LIGHT_OFF = 0;
-const int _FRONT_LIGHT_ON_LOW = 1;
-const int _FRONT_LIGHT_ON_HIGH = 2;
-const int _REAR_LIGHT_ID = 2;
-const int _REAR_LIGHT_OFF = 0;
-const int _REAR_LIGHT_ON_SOLID = 1;
-const int _REAR_LIGHT_ON_BLINKING = 2;
+const String _AUTOMATIC_STATUS_KEY = "automatic_status";
+const String _CALIBRATED_ONCE_STATUS_KEY = "calibrated_once_status";
+
+enum FrontLight {
+	Off,
+	Low,
+	High
+}
+
+extension FrontBytes on FrontLight {
+	List<int> getBytes(bool automatic) {
+		switch (this) {
+			case FrontLight.Off:
+				return [3, 0, 0];
+			case FrontLight.Low:
+				return automatic ? [3, 2, 0] : [3, 1, 0];
+			case FrontLight.High:
+				return automatic ? [3, 2, 2] : [3, 1, 1];
+		}
+	}
+}
+
+enum RearLight {
+	Off,
+	On,
+	Blinking
+}
+
+extension RearBytes on RearLight {
+	List<int> getBytes(bool automatic) {
+		switch (this) {
+			case RearLight.Off:
+				return [2, 0, 0];
+			case RearLight.On:
+				return automatic ? [2, 1, 1] : [2, 1, 0];
+			case RearLight.Blinking:
+				return automatic ? [2, 2, 1] : [2, 2, 0];
+		}
+	}
+}
+
+// [ NO AUTO ]
+// Front off = 3, 0, 0
+// Front low = 3, 1, 0
+// Front high = 3, 1, 1
+// Rear off = 2, 0, 0
+// Rear on = 2, 1, 0
+// Rear blink = 2, 2, 0
+
+// [ AUTO ]
+// Calibrate automatic = 5, 0
+// Front low = 3, 2, 0
+// Front high = 3, 2, 2
+// Rear on = 2, 1, 1
+// Rear blink = 2, 2, 1
 
 Future<T> retry<T>({
-	Future<T> Function() function,
+	required Future<T> Function() function,
 	int numberOfRetries = 3,
 	Duration delayBetweenRetries = const Duration(milliseconds: 500)
 }) async {
@@ -52,11 +99,13 @@ enum _ConnectionState {
 
 class BikePage extends StatefulWidget {
 	final BluetoothDevice device;
-	final int rssi;
+	final int? rssi;
+	final List<ScanResult> lastResults;
 
 	BikePage({
-		@required this.device,
-		@required this.rssi
+		required this.device,
+		required this.rssi,
+		required this.lastResults
 	});
 
 	@override
@@ -64,44 +113,66 @@ class BikePage extends StatefulWidget {
 }
 
 class _BikePageState extends State<BikePage> {
-	int _frontLight;
-	int get frontLight {
-		return _frontLight;
-	}
-	set frontLight(int value) {
+	late FrontLight _frontLight;
+	FrontLight get frontLight => _frontLight;
+	set frontLight(FrontLight value) {
 		setState(() {
 			_frontLight = value;
 		});
-		_prefs.setInt(_FRONT_LIGHT_STATUS_KEY, value);
+		_prefs.setInt(_FRONT_LIGHT_STATUS_KEY, value.index);
 	}
-	int _rearLight;
-	int get rearLight {
-		return _rearLight;
-	}
-	set rearLight(int value) {
+	late RearLight _rearLight;
+	RearLight get rearLight => _rearLight;
+	set rearLight(RearLight value) {
 		setState(() {
 			_rearLight = value;
 		});
-		_prefs.setInt(_REAR_LIGHT_STATUS_KEY, value);
+		_prefs.setInt(_REAR_LIGHT_STATUS_KEY, value.index);
 	}
-	SharedPreferences _prefs;
+	late bool _automatic;
+	bool get automatic => _automatic;
+	set automatic(bool value) {
+		setState(() {
+			_automatic = value;
+		});
+		_prefs.setBool(_AUTOMATIC_STATUS_KEY, value);
+	}
+	late bool _calibratedOnce;
+	bool get calibratedOnce => _calibratedOnce;
+	set calibratedOnce(bool value) {
+		setState(() {
+			_calibratedOnce = value;
+		});
+		_prefs.setBool(_CALIBRATED_ONCE_STATUS_KEY, value);
+	}
+	late SharedPreferences _prefs;
 	
 	_ConnectionState _connectionState = _ConnectionState.Connecting;
-	String _connectionErrorMessage;
-	StreamSubscription<BluetoothDeviceState> _stateSubscription;
-	StreamSubscription<List<int>> _characteristicSubscription;
+	String? _connectionErrorMessage;
+	late StreamSubscription<BluetoothDeviceState> _stateSubscription;
+	StreamSubscription<List<int>>? _characteristicSubscription;
 	Completer<void> _firstBatteryRead = Completer();
-	Timer _batteryCheckTimer;
-	int batteryMillivolts;
-	int batteryMilliamps;
-	BluetoothCharacteristic _characteristic;
+	Timer? _batteryCheckTimer;
+	int? batteryMillivolts;
+	int? batteryMilliamps;
+	BluetoothCharacteristic? _characteristic;
 	bool _expectedDisconnect = false;
 
 	void _initializePrefs() async {
 		_prefs = await SharedPreferences.getInstance();
+		int frontLightIndex = _prefs.getInt(_FRONT_LIGHT_STATUS_KEY) ?? FrontLight.Off.index;
+		if (frontLightIndex >= FrontLight.values.length) {
+			frontLightIndex = FrontLight.Off.index;
+		}
+		int rearLightIndex = _prefs.getInt(_REAR_LIGHT_STATUS_KEY) ?? RearLight.Off.index;
+		if (rearLightIndex >= RearLight.values.length) {
+			rearLightIndex = RearLight.Off.index;
+		}
 		setState(() {
-			_frontLight = _prefs.getInt(_FRONT_LIGHT_STATUS_KEY) ?? _FRONT_LIGHT_OFF;
-			_rearLight = _prefs.getInt(_REAR_LIGHT_STATUS_KEY) ?? _REAR_LIGHT_OFF;
+			_frontLight = FrontLight.values[frontLightIndex];
+			_rearLight = RearLight.values[rearLightIndex];
+			_automatic = _prefs.getBool(_AUTOMATIC_STATUS_KEY) ?? false;
+			_calibratedOnce = _prefs.getBool(_CALIBRATED_ONCE_STATUS_KEY) ?? false;
 		});
 	}
 
@@ -111,6 +182,7 @@ class _BikePageState extends State<BikePage> {
 				_connectionState = _ConnectionState.Connecting;
 			});
 			await widget.device.connect(autoConnect: true).timeout(_CONNECT_TIMEOUT);
+			_connectionErrorMessage = null;
 		}
 		catch (e) {
 			if (mounted) {
@@ -136,7 +208,7 @@ class _BikePageState extends State<BikePage> {
 	Future<void> _checkBattery(timer) async {
 		if (mounted) {
 			if (await widget.device.state.first == BluetoothDeviceState.connected) {
-				await _characteristic.write([0x14, 0x04]);
+				await _characteristic!.write([0x14, 0x04]);
 			}
 		}
 		else {
@@ -167,17 +239,17 @@ class _BikePageState extends State<BikePage> {
 		if (batteryMillivolts == null || batteryMilliamps == null) {
 			return Icons.battery_unknown;
 		}
-		else if (batteryMilliamps > 0) {
+		else if (batteryMilliamps! > 0) {
 			return BatteryIcons.charging;
 		}
 		else {
-			if (batteryMillivolts >= 4000) {
+			if (batteryMillivolts! >= 4000) {
 				return BatteryIcons.level4;
 			}
-			else if (batteryMillivolts >= 3272) {
+			else if (batteryMillivolts! >= 3272) {
 				return BatteryIcons.level3;
 			}
-			else if (batteryMillivolts >= 3200) {
+			else if (batteryMillivolts! >= 3200) {
 				return BatteryIcons.level2;
 			}
 			else {
@@ -199,9 +271,9 @@ class _BikePageState extends State<BikePage> {
 						}
 					}
 					if (this._characteristic != null) {
-						await _characteristic.setNotifyValue(true);
+						await _characteristic!.setNotifyValue(true);
 						if (_characteristicSubscription != null) {
-							_characteristicSubscription.cancel();
+							_characteristicSubscription!.cancel();
 							_firstBatteryRead = Completer();
 							Timer(Duration(seconds: 5), () {
 								if (!_firstBatteryRead.isCompleted) {
@@ -210,10 +282,8 @@ class _BikePageState extends State<BikePage> {
 								}
 							});
 						}
-						_characteristicSubscription = _characteristic.value.listen(_handleCharacteristicValue);
-						if (_batteryCheckTimer != null) {
-							_batteryCheckTimer.cancel();
-						}
+						_characteristicSubscription = _characteristic!.value.listen(_handleCharacteristicValue);
+						_batteryCheckTimer?.cancel();
 						_batteryCheckTimer = Timer.periodic(_BATTERY_CHECK_INTERVAL, _checkBattery);
 						try {
 							retry(
@@ -231,8 +301,8 @@ class _BikePageState extends State<BikePage> {
 							retry(
 								function: () async {
 									await Future.wait([
-										_characteristic.write([_FRONT_LIGHT_ID, frontLight, frontLight]),
-										_characteristic.write([_REAR_LIGHT_ID, rearLight, 0])
+										_characteristic!.write(frontLight.getBytes(automatic)),
+										_characteristic!.write(rearLight.getBytes(automatic))
 									]);
 								},
 								delayBetweenRetries: Duration(milliseconds: 100)
@@ -272,6 +342,40 @@ class _BikePageState extends State<BikePage> {
 		});
 	}
 
+	Future<void> calibrate() async {
+		final val = await showDialog<bool>(
+			context: context,
+			barrierDismissible: true,
+			builder: (BuildContext context) {
+				return AlertDialog(
+					title: Text("Calibrate light sensor"),
+					content: SingleChildScrollView(
+						child: ListBody(
+							children: [
+								Text('Place your bike in outdoor daylight. Any condition darker will turn on your lights automatically.'),
+								SizedBox(height: 8),
+								Text('Calibrating in shade is recommended.'),
+								Text('Calibrating indoors is not recommended.')
+							]
+						)
+					),
+					actions: [
+						TextButton(
+							child: Text("Calibrate"),
+							onPressed: () async {
+								await _characteristic!.write([5, 0]);
+								Navigator.of(context).pop(true);
+							}
+						)
+					]
+				);
+			}
+		);
+		if (val != null) {
+			calibratedOnce = true;
+		}
+	}
+
 	@override
 	void initState() {
 		super.initState();
@@ -286,7 +390,7 @@ class _BikePageState extends State<BikePage> {
 		if (oldWidget.device != widget.device) {
 			print("new device");
 			_stateSubscription.cancel();
-			_characteristicSubscription.cancel();
+			_characteristicSubscription?.cancel();
 			_initializeStateSubscription();
 		}
 	}
@@ -294,7 +398,7 @@ class _BikePageState extends State<BikePage> {
 	@override
 	void dispose() {
 		super.dispose();
-		_stateSubscription?.cancel();
+		_stateSubscription.cancel();
 		_characteristicSubscription?.cancel();
 	}
 
@@ -309,7 +413,6 @@ class _BikePageState extends State<BikePage> {
 				children: [
 					BluetoothRow(
 						device: widget.device,
-						onTap: null,
 						rssi: widget.rssi,
 						info: [
 							if (batteryMillivolts != null) "Battery Potential: $batteryMillivolts mV",
@@ -337,73 +440,112 @@ class _BikePageState extends State<BikePage> {
 							}
 					),
 					if (_connectionState == _ConnectionState.Good) Expanded(
-						child: Column(
-							mainAxisAlignment: MainAxisAlignment.spaceAround,
-							crossAxisAlignment: CrossAxisAlignment.center,
-							children: [
-								BikeUIGroup(
-									title: "Battery",
-									child: Icon(_getBatteryIcon(), size: 48)
-								),
-								BikeUIGroup(
-									title: "Front Light",
-									child: BikeLightButton(
-										options: [
-											BikeLightOption(
-												bluetoothValue: _FRONT_LIGHT_OFF,
-												icon: SunIcons.sun_filled_off,
-												text: "Off"
-											),
-											BikeLightOption(
-												bluetoothValue: _FRONT_LIGHT_ON_LOW,
-												icon: SunIcons.sun_filled,
-												text: "Low"
-											),
-											BikeLightOption(
-												bluetoothValue: _FRONT_LIGHT_ON_HIGH,
-												icon: SunIcons.sun_filled_brighter,
-												text: "High"
-											)
-										],
-										currentSelection: frontLight,
-										onTap: (choice) async {
-											setState(() {
-												frontLight = choice;
-											});
-											await _characteristic.write([_FRONT_LIGHT_ID, choice, choice]);
-										}
+						child: FittedBox(
+							fit: BoxFit.contain,
+							child: Column(
+								mainAxisAlignment: MainAxisAlignment.spaceAround,
+								crossAxisAlignment: CrossAxisAlignment.center,
+								children: [
+									BikeUIGroup(
+										title: "Battery",
+										child: Icon(_getBatteryIcon(), size: 48)
+									),
+									BikeUIGroup(
+										title: "Front Light",
+										child: BikeLightButton<FrontLight>(
+											options: [
+												BikeLightOption(
+													value: FrontLight.Off,
+													icon: SunIcons.sun_filled_off,
+													text: "Off"
+												),
+												BikeLightOption(
+													value: FrontLight.Low,
+													icon: SunIcons.sun_filled,
+													text: "Low"
+												),
+												BikeLightOption(
+													value: FrontLight.High,
+													icon: SunIcons.sun_filled_brighter,
+													text: "High"
+												)
+											],
+											currentSelection: frontLight,
+											onTap: (choice) async {
+												setState(() {
+													frontLight = choice;
+												});
+												await _characteristic!.write(choice.getBytes(automatic));
+											}
+										)
+									),
+									BikeUIGroup(
+										title: "Rear Lights",
+										child: BikeLightButton<RearLight>(
+											options: [
+												BikeLightOption(
+													value: RearLight.Off,
+													icon: SunIcons.sun_filled_off,
+													text: "Off"
+												),
+												BikeLightOption(
+													value: RearLight.On,
+													icon: SunIcons.sun_filled,
+													text: "Solid"
+												),
+												BikeLightOption(
+													value: RearLight.Blinking,
+													icon: SunIcons.sun,
+													text: "Blinking"
+												)
+											],
+											currentSelection: rearLight,
+											onTap: (choice) async {
+												setState(() {
+													rearLight = choice;
+												});
+												await _characteristic!.write(choice.getBytes(automatic));
+											}
+										)
+									),
+									BikeUIGroup(
+										title: "Automatic Lights",
+										child: BikeLightButton<bool>(
+											options: [
+												BikeLightOption(
+													value: false,
+													icon: Icons.auto_fix_off,
+													text: "Off"
+												),
+												BikeLightOption(
+													value: true,
+													icon: Icons.auto_fix_normal,
+													text: "On"
+												)
+											],
+											currentSelection: automatic,
+											onTap: (choice) async {
+												if (!calibratedOnce) {
+													await calibrate();
+													if (!calibratedOnce) {
+														// Calibration cancelled by user
+														return;
+													}
+												}
+												automatic = choice;
+												await Future.wait([
+													_characteristic!.write(frontLight.getBytes(automatic)),
+													_characteristic!.write(rearLight.getBytes(automatic))
+												]);
+											}
+										)
+									),
+									if (calibratedOnce) TextButton(
+										child: Text("Recalibrate automatic lights"),
+										onPressed: calibrate
 									)
-								),
-								BikeUIGroup(
-									title: "Rear Lights",
-									child: BikeLightButton(
-										options: [
-											BikeLightOption(
-												bluetoothValue: _REAR_LIGHT_OFF,
-												icon: SunIcons.sun_filled_off,
-												text: "Off"
-											),
-											BikeLightOption(
-												bluetoothValue: _REAR_LIGHT_ON_SOLID,
-												icon: SunIcons.sun_filled,
-												text: "Solid"
-											),
-											BikeLightOption(
-												bluetoothValue: _REAR_LIGHT_ON_BLINKING,
-												icon: SunIcons.sun,
-												text: "Blinking"
-											)
-										],
-										currentSelection: rearLight,
-										onTap: (choice) async {
-											setState(() {
-												rearLight = choice;
-											});
-											await _characteristic.write([_REAR_LIGHT_ID, choice, 0]);
-										}
-									)
-								)
-							]
+								]
+							)
 						)
 					)
 					else if (_connectionState == _ConnectionState.BadDevice) ...[
@@ -419,20 +561,27 @@ class _BikePageState extends State<BikePage> {
 										child: Text("Report Error"),
 										onPressed: () async {
 											List<BluetoothService> services = await widget.device.discoverServices();
-											String bluetoothText = services.map((service) {
-												return '- Service with ID ${service.uuid}\n' + ((service.characteristics != null) ? service.characteristics.map((characteristic) {
-													return '-- Characteristic with ID ${characteristic.uuid}\n' + ((characteristic.descriptors != null) ? characteristic.descriptors.map((descriptor) {
-														return '--- Descriptor with ID ${descriptor.uuid}\n';
-													}).join('') : '');
-												}).join('') : '');
+											String availableDevicesText = widget.lastResults.map((result) {
+												return '- ${result.device.name} with ID ${result.device.id} with RSSI ${result.rssi}';
 											}).join('');
-											print(bluetoothText);
+											String connectedDeviceText = services.map((service) {
+												return '- Service with ID ${service.uuid}\n' + service.characteristics.map((characteristic) {
+													return '-- Characteristic with ID ${characteristic.uuid}\n' + characteristic.descriptors.map((descriptor) {
+														return '--- Descriptor with ID ${descriptor.uuid}\n';
+													}).join('');
+												}).join('');
+											}).join('');
+											print(connectedDeviceText);
 											FlutterEmailSender.send(Email(
 												body: '''
 													Hi Callum,
 													Your app, Vanhawks Bike Light Controller, did not recognize my bike
 													Here is the Bluetooth data that will help you figure this out:
-													$bluetoothText
+													Available devices:
+													$availableDevicesText
+													Information about the chosen device:
+													${widget.device.name} with ID ${widget.device.id} with RSSI ${widget.rssi}
+													$connectedDeviceText
 													Thanks!
 												''',
 												subject: 'Vanhawks app did not recognize my bike',
@@ -489,8 +638,8 @@ class BikeUIGroup extends StatelessWidget {
 	final String title;
 
 	BikeUIGroup({
-		@required this.child,
-		@required this.title
+		required this.child,
+		required this.title
 	});
 
 	@override
@@ -512,37 +661,40 @@ class BikeUIGroup extends StatelessWidget {
 	}
 }
 
-class BikeLightOption {
-	final int bluetoothValue;
+class BikeLightOption<T> {
+	final T value;
 	final IconData icon;
 	final String text;
 
 	const BikeLightOption({
-		@required this.bluetoothValue,
-		@required this.icon,
-		@required this.text
+		required this.value,
+		required this.icon,
+		required this.text
 	});
 }
 
-class BikeLightButton extends StatefulWidget {
-	final Function(int) onTap;
-	final List<BikeLightOption> options;
-	final int currentSelection;
+class BikeLightButton<T> extends StatefulWidget {
+	final Function(T) onTap;
+	final List<BikeLightOption<T>> options;
+	final T currentSelection;
 
 	BikeLightButton({
-		@required this.onTap,
-		@required this.options,
-		@required this.currentSelection
+		required this.onTap,
+		required this.options,
+		required this.currentSelection
 	});
 
 	@override
-	_BikeLightButtonState createState() => _BikeLightButtonState();
+	_BikeLightButtonState createState() => _BikeLightButtonState<T>();
 }
 
-class _BikeLightButtonState extends State<BikeLightButton> {
+class _BikeLightButtonState<T> extends State<BikeLightButton<T>> {
 	bool _loading = false;
 
-	Widget _buildChild({BikeLightOption option, bool selected}) {
+	Widget _buildChild({
+		required BikeLightOption<T> option,
+		required bool selected
+	}) {
 		return Container(
 			padding: EdgeInsets.only(top: 8, bottom: 8),
 			child: Column(
@@ -562,13 +714,16 @@ class _BikeLightButtonState extends State<BikeLightButton> {
 		);
 	}
 
-	Function() _buildOnPressed({BikeLightOption option, bool selected}) {
+	Function()? _buildOnPressed({
+		required BikeLightOption<T> option,
+		required bool selected
+	}) {
 		return (_loading || selected) ? null : () async {
 			setState(() {
 				_loading = true;
 			});
 			try {
-				await widget.onTap(option.bluetoothValue);
+				await widget.onTap(option.value);
 			}
 			finally {
 				setState(() {
@@ -584,7 +739,7 @@ class _BikeLightButtonState extends State<BikeLightButton> {
 			mainAxisAlignment: MainAxisAlignment.spaceEvenly,
 			mainAxisSize: MainAxisSize.min,
 			children: widget.options.expand((option) {
-				bool selected = (widget.currentSelection == option.bluetoothValue);
+				bool selected = (widget.currentSelection == option.value);
 				return [
 					Container(
 						child: selected ? ElevatedButton(
@@ -598,7 +753,7 @@ class _BikeLightButtonState extends State<BikeLightButton> {
 										if (states.contains(MaterialState.disabled)) {
 											return Theme.of(context).disabledColor;
 										}
-										return null;
+										return Theme.of(context).backgroundColor;
 									}
 								),
 								foregroundColor: MaterialStateProperty.resolveWith<Color>(
@@ -606,7 +761,7 @@ class _BikeLightButtonState extends State<BikeLightButton> {
 										if (states.contains(MaterialState.disabled)) {
 											return Theme.of(context).colorScheme.onSurface;
 										}
-										return null;
+										return Theme.of(context).colorScheme.primary;
 									}
 								)
 							),
