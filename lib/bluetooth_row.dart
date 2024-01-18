@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_blue/flutter_blue.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import 'icons.dart';
 
@@ -29,11 +29,11 @@ class BluetoothRow extends StatefulWidget {
 }
 
 class _BluetoothRowState extends State<BluetoothRow> {
-	BluetoothDeviceState? _state;
-	late StreamSubscription<BluetoothDeviceState> _stateSubscription;
+	BluetoothConnectionState? _state;
+	late StreamSubscription<BluetoothConnectionState> _stateSubscription;
 
 	void _initStateSubscription() {
-		_stateSubscription = widget.device.state.listen((newState) {
+		_stateSubscription = widget.device.connectionState.listen((newState) {
 			_state = newState;
 		});
 	}
@@ -65,19 +65,19 @@ class _BluetoothRowState extends State<BluetoothRow> {
 			barrierDismissible: true,
 			builder: (BuildContext context) {
 				return AlertDialog(
-					title: Text((widget.device.name.length > 0) ? widget.device.name : "Unknown device"),
+					title: Text((widget.device.platformName.length > 0) ? widget.device.platformName : "Unknown device"),
 					content: SingleChildScrollView(
 						child: ListBody(
 							children: [
 								if (widget.rssi != null) Text("RSSI: ${widget.rssi} dBm"),
 								...widget.info.map((line) => Text(line)),
 								Text(""),
-								Text("MAC Address: ${widget.device.id}", style: TextStyle(fontSize: 14), textAlign: TextAlign.left)
+								Text("MAC Address: ${widget.device.remoteId}", style: TextStyle(fontSize: 14), textAlign: TextAlign.left)
 							]
 						)
 					),
 					actions: [
-						if (_state == BluetoothDeviceState.connected) ...[
+						if (_state == BluetoothConnectionState.connected) ...[
 							TextButton(
 								child: Text("Disconnect"),
 								onPressed: () {
@@ -101,7 +101,7 @@ class _BluetoothRowState extends State<BluetoothRow> {
 	}
 
 	IconData _pickIconData() {
-		if (widget.rssi == null || _state == BluetoothDeviceState.connected) {
+		if (widget.rssi == null || _state == BluetoothConnectionState.connected) {
 			return Icons.bluetooth_connected;
 		}
 		else {
@@ -120,20 +120,20 @@ class _BluetoothRowState extends State<BluetoothRow> {
 	@override
 	Widget build(BuildContext context) {
 		return Hero(
-			tag: widget.device.id,
+			tag: widget.device.remoteId,
 			child: Material(
 				child: ListTile(
 					leading: Icon(_pickIconData()),
-					title: widget.device.name.length > 0 ? 
-						Text(widget.device.name) :
-						Text(widget.device.id.id, style: TextStyle(
+					title: widget.device.platformName.length > 0 ? 
+						Text(widget.device.platformName) :
+						Text(widget.device.remoteId.str, style: TextStyle(
 							color: Colors.grey
 						)),
 					trailing: widget.infoButton ? GestureDetector(
 						child: Icon(Icons.info),
 						onTap: () => _showInfo(context)
 					) : null,
-					onTap: (widget.onTap != null) ? () => widget.onTap!(_state == BluetoothDeviceState.connected) : null
+					onTap: (widget.onTap != null) ? () => widget.onTap!(_state == BluetoothConnectionState.connected) : null
 				)
 			)
 		);

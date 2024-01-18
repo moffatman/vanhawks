@@ -17,11 +17,13 @@ class MyApp extends StatelessWidget {
 			brightness: Brightness.light,
 			primarySwatch: Colors.grey,
 			visualDensity: VisualDensity.adaptivePlatformDensity,
+			useMaterial3: false
 		),
 		darkTheme: ThemeData(
 			brightness: Brightness.dark,
 			primarySwatch: Colors.grey,
-			visualDensity: VisualDensity.adaptivePlatformDensity
+			visualDensity: VisualDensity.adaptivePlatformDensity,
+			useMaterial3: false
 		),
 		themeMode: ThemeMode.system,
 		home: BluetoothPage()

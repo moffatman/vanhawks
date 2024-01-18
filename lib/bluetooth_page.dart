@@ -4,7 +4,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_blue/flutter_blue.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vanhawks/util.dart';
@@ -31,7 +31,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
 	late SharedPreferences _prefs;
 	bool _initialized = false;
 	bool _beforeConnect = true;
-	late BluetoothState _bluetoothState;
+	late BluetoothAdapterState _bluetoothState;
 	bool _withinFirstFiveSeconds = true;
 	bool _mockBluetooth = false;
 
@@ -41,7 +41,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
 	}
 	set savedBluetoothIdentifier(DeviceIdentifier? id) {
 		if (id != null) {
-			_prefs.setString(_BLUETOOTH_ID_KEY, id.id);
+			_prefs.setString(_BLUETOOTH_ID_KEY, id.str);
 		}
 		else {
 			_prefs.remove(_BLUETOOTH_ID_KEY);
@@ -70,7 +70,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
 		_passedFirstLaunch = value;
 	}
 
-	late StreamSubscription<BluetoothState> _stateSubscription;
+	late StreamSubscription<BluetoothAdapterState> _stateSubscription;
 	late StreamSubscription<List<ScanResult>> _scanSubscription;
 	late Timer _recheckConnectedDevicesTimer;
 
@@ -88,27 +88,27 @@ class _BluetoothPageState extends State<BluetoothPage> {
 				savedBluetoothIdentifier = DeviceIdentifier(_previousBluetoothIdentifierString);
 			}
 		}
-		_bluetoothState = await FlutterBlue.instance.state.first;
-		if (passedFirstLaunch && (_bluetoothState == BluetoothState.on) && !(await FlutterBlue.instance.isScanning.first)) {
-			FlutterBlue.instance.startScan();
+		_bluetoothState = await FlutterBluePlus.adapterState.first;
+		if (passedFirstLaunch && (_bluetoothState == BluetoothAdapterState.on) && !(await FlutterBluePlus.isScanning.first)) {
+			FlutterBluePlus.startScan();
 		}
 		_initialized = true;
-		_scanSubscription = FlutterBlue.instance.scanResults.listen((scanResults) async {
+		_scanSubscription = FlutterBluePlus.scanResults.listen((scanResults) async {
 			if (savedBluetoothIdentifier != null) {
-				Iterable<ScanResult> results = scanResults.where((result) => result.device.id == savedBluetoothIdentifier);
+				Iterable<ScanResult> results = scanResults.where((result) => result.device.remoteId == savedBluetoothIdentifier);
 				if (results.length > 0 && _beforeConnect) {
 					_tapBike(results.first.device, results.first.rssi, scanResults);
 				}
 			}
 		});
-		_stateSubscription = FlutterBlue.instance.state.listen((newState) async {
+		_stateSubscription = FlutterBluePlus.adapterState.listen((newState) async {
 			if (mounted) {
 				setState(() {
 					_bluetoothState = newState;
 				});
-				if (newState == BluetoothState.on) {
-					if (passedFirstLaunch && !(await FlutterBlue.instance.isScanning.first)) {
-						FlutterBlue.instance.startScan();
+				if (newState == BluetoothAdapterState.on) {
+					if (passedFirstLaunch && !(await FlutterBluePlus.isScanning.first)) {
+						FlutterBluePlus.startScan();
 					}
 				}
 			}
@@ -131,9 +131,9 @@ class _BluetoothPageState extends State<BluetoothPage> {
 	}
 
 	void _recheckConnectedDevices(Timer timer) {
-		FlutterBlue.instance.connectedDevices.then((devices) {
+		FlutterBluePlus.systemDevices.then((devices) {
 			if (savedBluetoothIdentifier != null) {
-				BluetoothDevice? targetDevice = devices.tryFirstWhere((device) => device.id == savedBluetoothIdentifier);
+				BluetoothDevice? targetDevice = devices.tryFirstWhere((device) => device.remoteId == savedBluetoothIdentifier);
 				if (targetDevice != null && _beforeConnect) {
 					_tapBike(targetDevice, null, []);
 				}
@@ -155,7 +155,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
 
 	@override
 	void dispose() {
-		FlutterBlue.instance.stopScan();
+		FlutterBluePlus.stopScan();
 		_stateSubscription.cancel();
 		_scanSubscription.cancel();
 		_recheckConnectedDevicesTimer.cancel();
@@ -164,8 +164,8 @@ class _BluetoothPageState extends State<BluetoothPage> {
 
 	Future<void> _tapBike(BluetoothDevice device, int? rssi, List<ScanResult> lastResults) async {
 		setState(() {
-			savedBluetoothIdentifier = device.id;
-			savedBluetoothName = device.name;
+			savedBluetoothIdentifier = device.remoteId;
+			savedBluetoothName = device.platformName;
 			_beforeConnect = false;
 		});
 		await Navigator.of(context).pushReplacement(
@@ -181,13 +181,13 @@ class _BluetoothPageState extends State<BluetoothPage> {
 	}
 
 	String _getNoBluetoothMessage() {
-		if (_bluetoothState == BluetoothState.off) {
+		if (_bluetoothState == BluetoothAdapterState.off) {
 			return "Bluetooth is off";
 		}
-		else if (_bluetoothState == BluetoothState.unauthorized) {
+		else if (_bluetoothState == BluetoothAdapterState.unauthorized) {
 			return "Bluetooth permissions are not granted";
 		}
-		else if (_bluetoothState == BluetoothState.unavailable) {
+		else if (_bluetoothState == BluetoothAdapterState.unavailable) {
 			return "Bluetooth is unavailable";
 		}
 		else {
@@ -232,8 +232,8 @@ class _BluetoothPageState extends State<BluetoothPage> {
 									onPressed: () {
 										setState(() {
 											passedFirstLaunch = true;
-											if (_bluetoothState == BluetoothState.on) {
-												FlutterBlue.instance.startScan();
+											if (_bluetoothState == BluetoothAdapterState.on) {
+												FlutterBluePlus.startScan();
 											}
 										});
 									}
@@ -245,7 +245,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
 				)
 			);
 		}
-		else if (_bluetoothState == BluetoothState.on || _mockBluetooth) {
+		else if (_bluetoothState == BluetoothAdapterState.on || _mockBluetooth) {
 			return Column(
 				children: [
 					if (_beforeConnect && savedBluetoothName != null) ...[
@@ -278,7 +278,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
 						SizedBox(height: 32)
 					]
 					else StreamBuilder(
-						stream: _mockBluetooth ? MockFlutterBlue.instance.scanResults : FlutterBlue.instance.scanResults,
+						stream: _mockBluetooth ? MockFlutterBluePlus.scanResults : FlutterBluePlus.scanResults,
 						builder: (BuildContext context, AsyncSnapshot<List<ScanResult>> snapshot) {
 							if (snapshot.hasData) {
 								List<Widget> rows = [];
@@ -286,8 +286,8 @@ class _BluetoothPageState extends State<BluetoothPage> {
 								if (data.length > 0) {
 									data.sort((a, b) => b.rssi - a.rssi);
 									mergeSort(data, compare: (ScanResult a, ScanResult b) {
-										bool aName = a.device.name.length > 0;
-										bool bName = b.device.name.length > 0;
+										bool aName = a.device.platformName.length > 0;
+										bool bName = b.device.platformName.length > 0;
 										return aName ? (bName ? 0 : -1) : (bName ? 1 : 0);
 									});
 									rows.addAll(data.map((result) {
@@ -381,7 +381,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
 					),
 					SizedBox(height: 32),
 					if (
-						_initialized && ((_bluetoothState == BluetoothState.on && !(_beforeConnect && savedBluetoothName != null)) || _mockBluetooth) // results list
+						_initialized && ((_bluetoothState == BluetoothAdapterState.on && !(_beforeConnect && savedBluetoothName != null)) || _mockBluetooth) // results list
 					) Expanded(
 						child: Card(
 							child: _cardContents(context),

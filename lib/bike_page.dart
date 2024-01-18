@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_blue/flutter_blue.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:flutter_email_sender/flutter_email_sender.dart';
@@ -149,7 +149,7 @@ class _BikePageState extends State<BikePage> {
 	
 	_ConnectionState _connectionState = _ConnectionState.Connecting;
 	String? _connectionErrorMessage;
-	late StreamSubscription<BluetoothDeviceState> _stateSubscription;
+	late StreamSubscription<BluetoothConnectionState> _stateSubscription;
 	StreamSubscription<List<int>>? _characteristicSubscription;
 	Completer<void> _firstBatteryRead = Completer();
 	Timer? _batteryCheckTimer;
@@ -200,14 +200,14 @@ class _BikePageState extends State<BikePage> {
 	}
 
 	void _connectIfNeeded() async {
-		if (await widget.device.state.first != BluetoothDeviceState.connected) {
+		if (await widget.device.connectionState.first != BluetoothConnectionState.connected) {
 			_connect();
 		}
 	}
 
 	Future<void> _checkBattery(timer) async {
 		if (mounted) {
-			if (await widget.device.state.first == BluetoothDeviceState.connected) {
+			if (await widget.device.connectionState.first == BluetoothConnectionState.connected) {
 				await _characteristic!.write([0x14, 0x04]);
 			}
 		}
@@ -259,9 +259,9 @@ class _BikePageState extends State<BikePage> {
 	}
 
 	void _initializeStateSubscription() {
-		_stateSubscription = widget.device.state.listen((newState) async {
+		_stateSubscription = widget.device.connectionState.listen((newState) async {
 			if (mounted) {
-				if (newState == BluetoothDeviceState.connected) {
+				if (newState == BluetoothConnectionState.connected) {
 					List<BluetoothService> services = await widget.device.discoverServices();
 					for (BluetoothService service in services) {
 						for (BluetoothCharacteristic characteristic in service.characteristics) {
@@ -282,7 +282,7 @@ class _BikePageState extends State<BikePage> {
 								}
 							});
 						}
-						_characteristicSubscription = _characteristic!.value.listen(_handleCharacteristicValue);
+						_characteristicSubscription = _characteristic!.lastValueStream.listen(_handleCharacteristicValue);
 						_batteryCheckTimer?.cancel();
 						_batteryCheckTimer = Timer.periodic(_BATTERY_CHECK_INTERVAL, _checkBattery);
 						try {
@@ -321,11 +321,6 @@ class _BikePageState extends State<BikePage> {
  							_connectionState = _ConnectionState.BadDevice;
 						});
 					}
-				}
-				else if (newState == BluetoothDeviceState.connecting) {
-					setState(() {
-						_connectionState = _ConnectionState.Connecting;
-					});
 				}
 				else {
 					if (_expectedDisconnect) {
@@ -562,7 +557,7 @@ class _BikePageState extends State<BikePage> {
 										onPressed: () async {
 											List<BluetoothService> services = await widget.device.discoverServices();
 											String availableDevicesText = widget.lastResults.map((result) {
-												return '- "${result.device.name}" with ID ${result.device.id} and RSSI ${result.rssi}';
+												return '- "${result.device.platformName}" with ID ${result.device.remoteId} and RSSI ${result.rssi}';
 											}).join('\n');
 											String connectedDeviceText = services.map((service) {
 												return '- Service with ID ${service.uuid}\n' + service.characteristics.map((characteristic) {
@@ -581,7 +576,7 @@ class _BikePageState extends State<BikePage> {
 													$availableDevicesText
 													
 													Chosen device:
-													"${widget.device.name}" with ID ${widget.device.id} and RSSI ${widget.rssi}
+													"${widget.device.platformName}" with ID ${widget.device.remoteId} and RSSI ${widget.rssi}
 													$connectedDeviceText
 
 													Thanks!
@@ -755,7 +750,7 @@ class _BikeLightButtonState<T> extends State<BikeLightButton<T>> {
 										if (states.contains(MaterialState.disabled)) {
 											return Theme.of(context).disabledColor;
 										}
-										return Theme.of(context).backgroundColor;
+										return Theme.of(context).colorScheme.background;
 									}
 								),
 								foregroundColor: MaterialStateProperty.resolveWith<Color>(

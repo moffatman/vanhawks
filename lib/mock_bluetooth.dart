@@ -1,70 +1,58 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:flutter_blue/flutter_blue.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:rxdart/rxdart.dart';
 
-class MockBike implements BluetoothDevice {
+DeviceIdentifier _makeRandomId() {
+	String idString = "";
+	for (int i = 0; i < 16; i++) {
+		idString += Random().nextInt(16).toRadixString(16);
+	}
+	return DeviceIdentifier(idString);
+}
+
+class MockBike extends BluetoothDevice {
 	List<BluetoothService> _services = [];
 
-	MockBike(this.name, {isVanhawks = false}) {
-		_state.add(BluetoothDeviceState.disconnected);
-		String idString = "";
-		for (int i = 0; i < 16; i++) {
-			idString += Random().nextInt(16).toRadixString(16);
-		}
+	MockBike(this.platformName, {isVanhawks = false}) : super(
+		remoteId: _makeRandomId()
+	) {
+		_state.add(BluetoothConnectionState.disconnected);
 		if (isVanhawks) {
 			_services.add(MockBikeService());
 		}
 		else {
 			_services.add(MockInvalidService());
 		}
-		id = DeviceIdentifier(idString);
 	}
 
-	late DeviceIdentifier id;
-
-	Stream<bool> get isDiscoveringServices async* {
-		yield false;
-	}
-
-	String name;
-
-	BluetoothDeviceType get type {
-		return BluetoothDeviceType.le;
-	}
+	String platformName;
 
 	Future<void> connect({
 		Duration? timeout,
+		int? mtu,
 		bool autoConnect = true,
 	}) async {
 		print("connect()");
 		await Future.delayed(Duration(seconds: 1), () => null);
-		_state.add(BluetoothDeviceState.connected);
+		_state.add(BluetoothConnectionState.connected);
 		print("set state");
 	}
 
-	Future disconnect() async {
-		_state.add(BluetoothDeviceState.disconnected);
+	Future disconnect({bool queue = true, int timeout = 35}) async {
+		_state.add(BluetoothConnectionState.disconnected);
 	}
 
-	Future<List<BluetoothService>> discoverServices() async => _services;
+	Future<List<BluetoothService>> discoverServices({bool subscribeToServicesChanged = true, int timeout = 15}) async => _services;
 
 	Stream<List<BluetoothService>> get services async* {
 		
 	}
 
-	BehaviorSubject<BluetoothDeviceState> _state = BehaviorSubject<BluetoothDeviceState>();
-	Stream<BluetoothDeviceState> get state {
+	BehaviorSubject<BluetoothConnectionState> _state = BehaviorSubject<BluetoothConnectionState>();
+	Stream<BluetoothConnectionState> get connectionState {
 		return _state;
-	}
-
-	Stream<int> get mtu async* {
-		
-	}
-
-	Future<void> requestMtu(int desiredMtu) async {
-
 	}
 
 	Future<bool> get canSendWriteWithoutResponse async {
@@ -72,59 +60,66 @@ class MockBike implements BluetoothDevice {
 	}
 }
 
-class MockBikeService implements BluetoothService {
+class _MockBluetoothService implements BluetoothService {
+	get characteristics => throw UnimplementedError();
+	get includedServices => [];
+	get remoteId => throw UnimplementedError();
+	get deviceId => remoteId;
+	get isPrimary => throw UnimplementedError();
+	get serviceUuid => throw UnimplementedError();
+	get uuid => serviceUuid;
+}
+
+class MockBikeService extends _MockBluetoothService {
 	get characteristics {
 		return [
 			MockBikeCharacteristic()
 		];
 	}
 	get includedServices => [];
-	get deviceId => throw UnimplementedError();
-	get isPrimary => throw UnimplementedError();
 	get uuid => Guid("9ac78e8d1e9943ce83637c1b1e003a10");
 }
 
-class MockInvalidService implements BluetoothService {
+class MockInvalidService extends _MockBluetoothService {
 	get characteristics {
 		return [
 			MockInvalidCharacteristic()
 		];
 	}
 	get includedServices => [];
-	get deviceId => throw UnimplementedError();
-	get isPrimary => throw UnimplementedError();
 	get uuid => Guid("a0000e8d1e9943ce83637c1b1e003a11");
 }
 
-class MockInvalidCharacteristic implements BluetoothCharacteristic {
+class _MockBluetoothCharacteristic implements BluetoothCharacteristic {
 	get isNotifying => throw UnimplementedError();
 	get descriptors => [];
 	get properties => throw UnimplementedError();
 	get serviceUuid => throw UnimplementedError();
 	get secondaryServiceUuid => throw UnimplementedError();
 	get lastValue => throw UnimplementedError();
-	get uuid => Guid("90000e8d1e9943ce83637c1b1e003a11");
+	get uuid => throw UnimplementedError();
 	get deviceId => throw UnimplementedError();
 	get value => throw UnimplementedError();
-	Future<bool> setNotifyValue(bool notify) async => true;
-	Future<List<int>> read() async => [];
-	Future<Null> write(List<int> value, {bool withoutResponse = false}) async => null;
+	Future<bool> setNotifyValue(bool notify, {bool forceIndications = false, int timeout = 15}) async => true;
+	Future<List<int>> read({int timeout = 15}) async => [];
+	Future<Null> write(List<int> value, {bool withoutResponse = false, bool allowLongWrite = false, int timeout = 15}) async => null;
+	Guid get characteristicUuid => throw UnimplementedError();
+	BluetoothDevice get device => throw UnimplementedError();
+	Stream<List<int>> get lastValueStream => throw UnimplementedError();
+	Stream<List<int>> get onValueChangedStream => throw UnimplementedError();
+	Stream<List<int>> get onValueReceived => throw UnimplementedError();
+	 DeviceIdentifier get remoteId => throw UnimplementedError();
 }
 
-class MockBikeCharacteristic implements BluetoothCharacteristic {
+class MockInvalidCharacteristic extends _MockBluetoothCharacteristic {
+	get uuid => Guid("90000e8d1e9943ce83637c1b1e003a11");
+}
+
+class MockBikeCharacteristic extends _MockBluetoothCharacteristic {
 	BehaviorSubject<List<int>> _value = BehaviorSubject<List<int>>();
-	get isNotifying => throw UnimplementedError();
-	get descriptors => throw UnimplementedError();
-	get properties => throw UnimplementedError();
-	get serviceUuid => throw UnimplementedError();
-	get secondaryServiceUuid => throw UnimplementedError();
-	get lastValue => throw UnimplementedError();
 	get uuid => Guid("9ac78e8d1e9943ce83637c1b1e003a11");
-	get deviceId => throw UnimplementedError();
-	get value => _value;
-	Future<bool> setNotifyValue(bool notify) async => true;
-	Future<List<int>> read() async => [];
-	Future<Null> write(List<int> value, {bool withoutResponse = false}) async {
+	get lastValueStream => _value;
+	Future<Null> write(List<int> value, {bool withoutResponse = false, bool allowLongWrite = false, int timeout = 15}) async {
 		print("wrote to mock");
 		print(value);
 		if (value.length == 2 && value[0] == 0x14 && value[1] == 0x04) {
@@ -133,11 +128,9 @@ class MockBikeCharacteristic implements BluetoothCharacteristic {
 	}
 }
 
-class MockFlutterBlue {
-	MockFlutterBlue._();
-	static MockFlutterBlue _instance = MockFlutterBlue._();
-	static MockFlutterBlue get instance => _instance;
-	Stream<List<ScanResult>> get scanResults async* {
+class MockFlutterBluePlus {
+	MockFlutterBluePlus._();
+	static Stream<List<ScanResult>> get scanResults async* {
 		while (true) {
 			yield [
 				MockScanResult(MockBike("Vanhawks Valour", isVanhawks: true)),
@@ -155,4 +148,5 @@ class MockScanResult implements ScanResult {
 	get advertisementData => throw UnimplementedError();
 	MockBike device;
 	int rssi = Random().nextInt(50) - 90;
+	DateTime get timeStamp => throw UnimplementedError();
 }
